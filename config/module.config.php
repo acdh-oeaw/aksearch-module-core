@@ -27,8 +27,23 @@ $config = [
         'factories' => [
             'AkSearch\ILS\Driver\PluginManager' => 'VuFind\ServiceManager\AbstractPluginManagerFactory',
             'VuFind\ILS\Connection' => 'AkSearch\ILS\ConnectionFactory',
+            //'AkSearch\Search\Params\PluginManager' => 'VuFind\ServiceManager\AbstractPluginManagerFactory',
+            //'AkSearch\Search\Results\PluginManager' => 'VuFind\ServiceManager\AbstractPluginManagerFactory',
+
         ],
     ],
+    'vufind' => [
+        'plugin_managers' => [
+            'search_params' => [
+                'factories' => [
+                    'AkSearch\Search\Solr\Params' => 'VuFind\Search\Solr\ParamsFactory',
+                ],
+                'aliases' => [
+                    'VuFind\Search\Solr\Params' => 'AkSearch\Search\Solr\Params',
+                ]
+            ]
+        ]
+    ]
 ];
 
 return $config;
