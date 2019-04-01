@@ -21,17 +21,6 @@ $config = [
             ],
         ],
     ],
-    // AK: Connection to custom Alma ILS driver (\AkSearch\ILS\Driver\Alma.php)
-    //     by providing an appropriate PluginManager and ConnectionFactory.
-    'service_manager' => [
-        'factories' => [
-            'AkSearch\ILS\Driver\PluginManager' => 'VuFind\ServiceManager\AbstractPluginManagerFactory',
-            'VuFind\ILS\Connection' => 'AkSearch\ILS\ConnectionFactory',
-            //'AkSearch\Search\Params\PluginManager' => 'VuFind\ServiceManager\AbstractPluginManagerFactory',
-            //'AkSearch\Search\Results\PluginManager' => 'VuFind\ServiceManager\AbstractPluginManagerFactory',
-
-        ],
-    ],
     'vufind' => [
         'plugin_managers' => [
             'search_params' => [
@@ -41,10 +30,18 @@ $config = [
                 'aliases' => [
                     'VuFind\Search\Solr\Params' => 'AkSearch\Search\Solr\Params',
                 ]
-            ]
+            ],
+            'ils_driver' => [
+                'factories' => [
+                    'AkSearch\ILS\Driver\Alma' => 'VuFind\ILS\Driver\AlmaFactory'
+
+                ],
+                'aliases' => [
+                    'VuFind\ILS\Driver\Alma' => 'AkSearch\ILS\Driver\Alma',
+                ]
+            ],
         ]
     ]
 ];
 
 return $config;
-?>
