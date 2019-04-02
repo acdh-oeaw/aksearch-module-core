@@ -42,6 +42,8 @@ use Interop\Container\ContainerInterface;
 class SearchBox extends \VuFind\View\Helper\Root\SearchBox
 {
 
+    use \AkSearch\Role\PermissionTrait;
+
     /**
      * AK: Class variable for authorization service
      *
@@ -100,7 +102,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
         $options = $this->optionsManager->get($activeSearchClass);
         foreach ($options->getBasicHandlers() as $searchVal => $searchDesc) {
             // AK: Check permissions
-            if ($this->getPermission($searchVal)) {
+            if ($this->getPermission($this->authService, $this->permissionsConfig, $searchVal)) {
                 $handlers[] = [
                     'value' => $searchVal, 'label' => $searchDesc, 'indent' => false,
                     'selected' => ($activeHandler == $searchVal)
@@ -152,7 +154,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
                     }
 
                     // AK: Check permissions
-                    if ($this->getPermission($searchVal)) {
+                    if ($this->getPermission($this->authService, $this->permissionsConfig, $searchVal)) {
                         $handlers[] = [
                             'value' => $type . ':' . $target . '|' . $searchVal,
                             'label' => $j == 1 ? $label : $searchDesc,
@@ -172,7 +174,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
                 }
             } elseif ($type == 'External') {
                 // AK: Check permissions using external search target
-                if ($this->getPermission($target)) {
+                if ($this->getPermission($this->authService, $this->permissionsConfig, $target)) {
                     $handlers[] = [
                         'value' => $type . ':' . $target, 'label' => $label,
                         'indent' => false, 'selected' => false
@@ -198,43 +200,6 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
 
         return $handlers;
     }
-
-    /**
-     * AK: Check permissions for the given search value
-     *
-     * @param string   $searchVal The name of the search value
-     * @return boolean            True if permission is granted, false otherwise
-     */
-    protected function getPermission($searchVal)
-    {
-        $permissionsToCheck = [];
-        foreach ($this->permissionsConfig as $permissionName => $permissionHanlderArray) {
-            if (in_array($searchVal, $permissionHanlderArray)) {
-                $permissionsToCheck[] = $permissionName;
-            }
-        }
-
-        if (empty($permissionsToCheck)) {
-            // Return true if no permission configs are set for a search value.
-            return true;
-        } else {
-            // If permission configs are set for a search value, check the permission status.
-            foreach ($permissionsToCheck as $permissionToCheck) {
-                if ($this->authService->isGranted($permissionToCheck)) {
-                    // Return true if permission is granted.
-                    return true;
-                }
-            }
-
-            // Default
-            return false;
-        }
-
-        // Fallback
-        return true;
-    }
-
-
 
 
 

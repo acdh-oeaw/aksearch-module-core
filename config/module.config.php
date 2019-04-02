@@ -2,13 +2,6 @@
 
 namespace AkSearch\Module\Configuration;
 
-/*
-// Show PHP errors:
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(- 1);
-*/
-
 $config = [
     // Authorization configuration:
     // AK: Using AkSearch\Role\DynamicRoleProviderFactory which in turn uses
@@ -23,12 +16,28 @@ $config = [
     ],
     'vufind' => [
         'plugin_managers' => [
-            'search_params' => [
+            /*'search_params' => [
                 'factories' => [
-                    'AkSearch\Search\Solr\Params' => 'VuFind\Search\Solr\ParamsFactory',
+                    'AkSearch\Search\Solr\Params' => 'AkSearch\Search\Solr\ParamsFactory',
                 ],
                 'aliases' => [
                     'VuFind\Search\Solr\Params' => 'AkSearch\Search\Solr\Params',
+                ]
+            ],*/
+            'search_results' => [
+                'factories' => [
+                    'AkSearch\Search\Solr\Results' => 'VuFind\Search\Solr\ResultsFactory',
+                ],
+                'aliases' => [
+                    'VuFind\Search\Solr\Results' => 'AkSearch\Search\Solr\Results',
+                ]
+            ],
+            'search_facetcache' => [
+                'factories' => [
+                    'AkSearch\Search\Solr\FacetCache' => 'VuFind\Search\Solr\FacetCacheFactory',
+                ],
+                'aliases' => [
+                    'VuFind\Search\Solr\FacetCache' => 'AkSearch\Search\Solr\FacetCache',
                 ]
             ],
             'ils_driver' => [

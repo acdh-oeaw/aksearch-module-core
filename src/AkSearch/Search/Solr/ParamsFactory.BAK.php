@@ -1,6 +1,6 @@
 <?php
 /**
- * AK: Extended Solr aspect of the Search Multi-class (Params)
+ * AK: Extended factory for Solr search params objects.
  *
  * PHP version 7
  *
@@ -27,9 +27,10 @@
  */
 namespace AkSearch\Search\Solr;
 
+use Interop\Container\ContainerInterface;
 
 /**
- * AK: Extending Solr Search Parameters
+ * AK: Extending factory for Solr search params objects.
  *
  * @category AKsearch
  * @package  Search_Solr
@@ -37,5 +38,32 @@ namespace AkSearch\Search\Solr;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:search_objects Wiki
  */
-class Params extends \VuFind\Search\Solr\Params { }
+class ParamsFactory extends \VuFind\Search\Params\ParamsFactory /*\VuFind\Search\Solr\ParamsFactory*/
+{
+    /**
+     * Create an object
+     *
+     * @param ContainerInterface $container     Service manager
+     * @param string             $requestedName Service being created
+     * @param null|array         $options       Extra options (optional)
+     *
+     * @return object
+     *
+     * @throws ServiceNotFoundException if unable to resolve the service.
+     * @throws ServiceNotCreatedException if an exception is raised when
+     * creating a service.
+     * @throws ContainerException if any other error occurs
+     */
+    public function __invoke(ContainerInterface $container, $requestedName,
+        array $options = null
+    ) {
+        if (!empty($options)) {
+            throw new \Exception('Unexpected options sent to factory.');
+        }
+        $helper = $container->get('VuFind\Search\Solr\HierarchicalFacetHelper');
 
+        $authService = $container->get('ZfcRbac\Service\AuthorizationService');
+
+        return parent::__invoke($container, $requestedName, [$helper, $authService]);
+    }
+}
