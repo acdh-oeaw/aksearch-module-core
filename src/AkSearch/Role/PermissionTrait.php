@@ -42,12 +42,18 @@ trait PermissionTrait
     /**
      * Check permissions for the given search value
      *
-     * @param array    $permissionsConfig [Permissions] configs from searchbox.ini
+     * @param \ZfcRbac\Service\AuthorizationService $authService
+     * @param array    $permissionsConfig [Permissions] configs as array in format:
+     *                                    permission.name1 =>
+     *                                      array(0 => value1, 1 => value2, ...),
+     *                                    permission.name2 =>
+     *                                      array(...)
+     *                                    ...
      * @param string   $value             The name of the value for checking the permission
+     * 
      * @return boolean                    True if permission is granted, false otherwise
      */
-    protected function getPermission($authService, $permissionsConfig, $value
-    )
+    protected function getPermission($authService, $permissionsConfig, $value)
     {
         $permissionsToCheck = [];
         foreach ($permissionsConfig as $permissionName => $permissionHanlderArray) {
@@ -75,6 +81,30 @@ trait PermissionTrait
 
         // Fallback
         return true;
+    }
+
+    /**
+     * Get an array of the values in [Permissions] section in facets.ini config
+     * file. The values are rewritten to an array that can be used for checking
+     * permissions.
+     * 
+     * @param array $facetPermissionsConfig   The raw [Permissions] configs in facet.ini
+     *
+     * @return array An array with rewritten values from [Permissions] configs in facet.ini
+     */
+    protected function getFacetPermissionsConfigs($facetPermissionsConfig)
+    {
+        $facetPermissions = [];
+        foreach ($facetPermissionsConfig as $permissionName => $facetFieldsAndValues) {
+            foreach ($facetFieldsAndValues as $facetFieldAndValue) {
+                $splittedFacetFieldAndValue = preg_split('/\s*:\s*/', $facetFieldAndValue, 2);
+                $facetField = trim($splittedFacetFieldAndValue[0]);
+                $facetValue = trim($splittedFacetFieldAndValue[1]);
+                $facetPermissions[$facetField][$permissionName][] = $facetValue;
+            }
+        }
+
+        return $facetPermissions;
     }
 
 }

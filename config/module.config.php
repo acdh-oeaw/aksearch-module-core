@@ -16,17 +16,9 @@ $config = [
     ],
     'vufind' => [
         'plugin_managers' => [
-            /*'search_params' => [
-                'factories' => [
-                    'AkSearch\Search\Solr\Params' => 'AkSearch\Search\Solr\ParamsFactory',
-                ],
-                'aliases' => [
-                    'VuFind\Search\Solr\Params' => 'AkSearch\Search\Solr\Params',
-                ]
-            ],*/
             'search_results' => [
                 'factories' => [
-                    'AkSearch\Search\Solr\Results' => 'VuFind\Search\Solr\ResultsFactory',
+                    'AkSearch\Search\Solr\Results' => 'AkSearch\Search\Solr\ResultsFactory',
                 ],
                 'aliases' => [
                     'VuFind\Search\Solr\Results' => 'AkSearch\Search\Solr\Results',
@@ -34,7 +26,7 @@ $config = [
             ],
             'search_facetcache' => [
                 'factories' => [
-                    'AkSearch\Search\Solr\FacetCache' => 'VuFind\Search\Solr\FacetCacheFactory',
+                    'AkSearch\Search\Solr\FacetCache' => 'AkSearch\Search\Solr\FacetCacheFactory',
                 ],
                 'aliases' => [
                     'VuFind\Search\Solr\FacetCache' => 'AkSearch\Search\Solr\FacetCache',

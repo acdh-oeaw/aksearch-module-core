@@ -1,6 +1,6 @@
 <?php
 /**
- * AK: Extended factory for Solr search params objects.
+ * AK: Extended Solr FacetCache Factory
  *
  * PHP version 7
  *
@@ -23,22 +23,23 @@
  * @package  Search_Solr
  * @author   Michael Birkner <michael.birkner@akwien.at>
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org/wiki/development:plugins:search_objects Wiki
+ * @link     https://vufind.org/wiki/development Wiki
  */
+
 namespace AkSearch\Search\Solr;
 
 use Interop\Container\ContainerInterface;
 
 /**
- * AK: Extending factory for Solr search params objects.
- *
+ * AK: Extending Solr FacetCache Factory.
+ * 
  * @category AKsearch
  * @package  Search_Solr
  * @author   Michael Birkner <michael.birkner@akwien.at>
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org/wiki/development:plugins:search_objects Wiki
+ * @link     https://vufind.org/wiki/development Wiki
  */
-class ParamsFactory extends \VuFind\Search\Params\ParamsFactory /*\VuFind\Search\Solr\ParamsFactory*/
+class FacetCacheFactory extends \VuFind\Search\Solr\FacetCacheFactory
 {
     /**
      * Create an object
@@ -60,10 +61,19 @@ class ParamsFactory extends \VuFind\Search\Params\ParamsFactory /*\VuFind\Search
         if (!empty($options)) {
             throw new \Exception('Unexpected options sent to factory.');
         }
-        $helper = $container->get('VuFind\Search\Solr\HierarchicalFacetHelper');
+        $parts = explode('\\', $requestedName);
+        $requestedNamespace = $parts[count($parts) - 2];
+        $results = $this->getResults($container, $requestedNamespace);
+        $cacheManager = $container->get('VuFind\Cache\Manager');
+        $language = $container->get('Zend\Mvc\I18n\Translator')->getLocale();
 
+        // AK: Create authorization service and pass it to \AkSearch\Search\Solr\FacetCache
         $authService = $container->get('ZfcRbac\Service\AuthorizationService');
 
-        return parent::__invoke($container, $requestedName, [$helper, $authService]);
+        // AK: Get facets.ini configs and pass it to \AkSearch\Search\Solr\FacetCache
+        $configLoader = $container->get('VuFind\Config\PluginManager');
+        $facetConfigs = $configLoader->get('facets')->toArray();
+
+        return new $requestedName($results, $cacheManager, $language, $authService, $facetConfigs);
     }
 }
