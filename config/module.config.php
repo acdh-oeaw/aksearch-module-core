@@ -3,17 +3,6 @@
 namespace AkSearch\Module\Configuration;
 
 $config = [
-    // Authorization configuration:
-    // AK: Using AkSearch\Role\DynamicRoleProviderFactory which in turn uses
-    //     AkSearch\Role\PermissionProvider\PluginManager which defines the
-    //     "usergroup" permission.
-    'zfc_rbac' => [
-        'role_provider_manager' => [
-            'factories' => [
-                'VuFind\Role\DynamicRoleProvider' => 'AkSearch\Role\DynamicRoleProviderFactory',
-            ],
-        ],
-    ],
     'vufind' => [
         'plugin_managers' => [
             'search_results' => [
@@ -42,7 +31,18 @@ $config = [
                 ]
             ],
         ]
-    ]
+    ],
+    // AK: Authorization configuration for the usergroup permission provider.
+    'zfc_rbac' => [
+        'vufind_permission_provider_manager' => [
+            'factories' => [
+                'AkSearch\Role\PermissionProvider\Usergroup' => 'AkSearch\Role\PermissionProvider\Factory::getUsergroup',
+            ],
+            'aliases' => [
+                'usergroup' => 'AkSearch\Role\PermissionProvider\Usergroup',
+            ]
+        ],
+    ],
 ];
 
 return $config;
