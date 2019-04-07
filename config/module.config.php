@@ -3,6 +3,23 @@
 namespace AkSearch\Module\Configuration;
 
 $config = [
+    'controllers' => [
+        'factories' => [
+            'AkSearch\Controller\SearchController' => 'VuFind\Controller\AbstractBaseFactory'
+
+        ],
+        'aliases' => [
+            'VuFind\Controller\SearchController' => 'AkSearch\Controller\SearchController'
+        ]
+    ],
+    'controller_plugins' => [
+        'factories' => [
+            'AkSearch\Controller\Plugin\NewItems' => 'AkSearch\Controller\Plugin\Factory::getNewItems'
+        ],
+        'aliases' => [
+            'newItems' => 'AkSearch\Controller\Plugin\NewItems'
+        ],
+    ],
     'vufind' => [
         'plugin_managers' => [
             'ils_driver' => [
