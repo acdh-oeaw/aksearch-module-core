@@ -116,7 +116,7 @@ class Alma extends \VuFind\ILS\Driver\Alma
         return $profile;
     }
 
-    public function getNewItems($page, $limit, $daysOld, $fundID, $paginatorPageNo) {
+    public function getNewItems($page, $limit, $daysOld, $fundID) {
         return [];
     }
 
