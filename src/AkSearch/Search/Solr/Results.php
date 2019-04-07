@@ -59,7 +59,7 @@ class Results extends \VuFind\Search\Solr\Results
      * AK: Indicate if facet values are written to the cache. This is important to
      *     ensure that ALL facet values are written to the cache because ALL of them
      *     must be evaluated against permissions.
-     * 
+     *
      * @var bool
      */
     protected $writeToCache = false;
@@ -91,14 +91,15 @@ class Results extends \VuFind\Search\Solr\Results
 
     /**
      * AK: Setting class variable $writeToCache. This is important to ensure that ALL
-     * facet values are written to the cache so that ALL of them can be evaluated
-     * against permissions.
+     *     facet values are written to the cache so that ALL of them can be evaluated
+     *     against permissions.
      *
      * @param bool $writeToCache
-     * 
+     *
      * @return void
      */
-    public function setWriteToCache($writeToCache) {
+    public function setWriteToCache($writeToCache)
+    {
         $this->writeToCache = $writeToCache;
     }
 
@@ -183,17 +184,17 @@ class Results extends \VuFind\Search\Solr\Results
                 $currentSettings['value'] = $value;
 
                 $displayText = $this->getParams()
-                ->checkForDelimitedFacetDisplayText($field, $value);
+                    ->checkForDelimitedFacetDisplayText($field, $value);
 
                 $currentSettings['displayText'] = $translate
-                ? $this->translate("$translateTextDomain::$displayText")
-                : $displayText;
+                    ? $this->translate("$translateTextDomain::$displayText")
+                    : $displayText;
                 $currentSettings['count'] = $count;
                 $currentSettings['operator']
-                = $this->getParams()->getFacetOperator($field);
+                    = $this->getParams()->getFacetOperator($field);
                 $currentSettings['isApplied']
-                = $this->getParams()->hasFilter("$field:" . $value)
-                || $this->getParams()->hasFilter("~$field:" . $value);
+                    = $this->getParams()->hasFilter("$field:" . $value)
+                    || $this->getParams()->hasFilter("~$field:" . $value);
 
                 // Store the collected values:
                 $list[$field]['list'][] = $currentSettings;
@@ -202,4 +203,7 @@ class Results extends \VuFind\Search\Solr\Results
         return $list;
     }
 
+    public function setResultTotal(int $resultTotal) {
+        $this->resultTotal = $resultTotal;
+    }
 }
