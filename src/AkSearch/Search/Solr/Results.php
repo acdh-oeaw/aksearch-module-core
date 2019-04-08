@@ -127,7 +127,7 @@ class Results extends \VuFind\Search\Solr\Results
 
         // AK: Get rewritten [Permissions] configs from facets.ini that we can use
         //     for permission validation.
-        $facetPermissionsConfigs = $this->getFacetPermissionsConfigs($this->facetConfigs['Permissions']);
+        $facetPermissionsConfigs = (isset($this->facetConfigs['Permissions'])) ? $this->getFacetPermissionsConfigs($this->facetConfigs['Permissions']) : [];
 
         // Start building the facet list:
         $list = [];

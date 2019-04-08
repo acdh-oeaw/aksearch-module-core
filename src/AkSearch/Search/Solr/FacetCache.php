@@ -127,7 +127,7 @@ class FacetCache extends \VuFind\Search\Solr\FacetCache
         }
 
         // AK: Get rewritten [Permissions] configs from facets.ini
-        $facetPermissionsConfigs = $this->getFacetPermissionsConfigs($this->facetConfigs['Permissions']);
+        $facetPermissionsConfigs = (isset($this->facetConfigs['Permissions'])) ? $this->getFacetPermissionsConfigs($this->facetConfigs['Permissions']) : [];
 
         // AK: Checking facet values for permission
         foreach ($facetPermissionsConfigs as $permissionsFieldName => $facetPermissionsConfig) {
