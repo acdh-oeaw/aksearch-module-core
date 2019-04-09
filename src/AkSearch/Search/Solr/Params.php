@@ -27,7 +27,6 @@
  */
 namespace AkSearch\Search\Solr;
 
-
 /**
  * AK: Extending Solr Search Parameters
  *
@@ -37,5 +36,15 @@ namespace AkSearch\Search\Solr;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:search_objects Wiki
  */
-class Params extends \VuFind\Search\Solr\Params { }
+class Params extends \VuFind\Search\Solr\Params {
 
+    /**
+     * AK: Initialize facet settings for the New Items search form.
+     *
+     * @return void
+     */
+    public function initNewItemsFacets()
+    {
+        $this->initFacetList('NewItems', 'NewItems_Settings');
+    }
+}

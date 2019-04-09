@@ -1,10 +1,10 @@
 <?php
 /**
- * Default Controller
+ * AK: Extended default Controller
  *
  * PHP version 7
  *
- * Copyright (C) Villanova University 2010.
+ * Copyright (C) AK Bibliothek Wien 2019.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -19,38 +19,96 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @category VuFind
+ * @category AKsearch
  * @package  Controller
- * @author   Demian Katz <demian.katz@villanova.edu>
- * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org Main Site
+ * @author   Michael Birkner <michael.birkner@akwien.at>
+ * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
+ * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
+
 namespace AkSearch\Controller;
 
-use VuFind\Exception\Mail as MailException;
-
 /**
- * Redirects the user to the appropriate default VuFind action.
+ * AK: Extending redirection of the user to the appropriate default VuFind action.
  *
- * @category VuFind
+ * @category AKsearch
  * @package  Controller
- * @author   Demian Katz <demian.katz@villanova.edu>
- * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org Main Site
+ * @author   Michael Birkner <michael.birkner@akwien.at>
+ * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
+ * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
 class SearchController extends \VuFind\Controller\SearchController
 {
 
     /**
-     * New item result list
+     * New item search form
+     * AK: Adding facets to the new items search form
      *
-     * @return mixed
+     * @return \Zend\View\Model\ViewModel
+     */
+    public function newitemAction()
+    {
+        // AK: Get the Solr results object (AkSearch\Search\Solr\Results)
+        $results = $this->getResultsManager()->get('Solr');
+
+        // AK: Get the Solr params object of the Solr result object
+        //     (AkSearch\Search\Solr\Params)
+        $params = $results->getParams();
+
+        // AK: Initialize the New Items facets via the Solr params object
+        $params->initNewItemsFacets();
+
+        // AK: Initialize the facet result variable
+        $facetList = [];
+
+        // AK:  Don't get facets if there are no facets configured by the given init
+        //      method.
+        if (!empty($params->getFacetConfig())) {
+            // AK: Set Solr result limit to 0 for getting no search results (improves
+            //     performance)
+            $params->setLimit(0);
+
+            // AK: Get facet list according to the configs for New Items facets in
+            //     facets.ini
+            $facetList = $results->getFacetList();
+        }
+
+        // Search parameters set?  Process results.
+        if ($this->params()->fromQuery('range') !== null) {
+            return $this->forwardTo('Search', 'NewItemResults');
+        }
+
+        // AK: Add the facet list to the New Itemsview so that we can use it there
+        //     (see themes/AkSearch/templates/search/newitem.phtml)
+        return $this->createViewModel(
+            [
+                'fundList' => $this->newItems()->getFundList(),
+                'ranges' => $this->newItems()->getRanges(),
+                'facetList' => $facetList
+            ]
+        );
+    }
+
+
+    /**
+     * New item result list
+     * AK: Applying facets from the new items search form
+     *
+     * @return \Zend\View\Model\ViewModel
      */
     public function newitemresultsAction()
     {
         // Retrieve new item list:
         $range = $this->params()->fromQuery('range');
         $dept = $this->params()->fromQuery('department');
+
+        // AK: Get facets filter from query sent by new items search form
+        $filter = $this->params()->fromQuery('filter');
+        
+        // AK: Add facets filter from items search form to query for results page
+        if (!empty($filter)) {
+            $this->getRequest()->getQuery()->set('filter', $filter);
+        }
 
         // Validate the range parameter -- it should not exceed the greatest
         // configured value:
