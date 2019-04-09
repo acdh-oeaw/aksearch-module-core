@@ -1,10 +1,10 @@
 <?php
 /**
- * Factory for controller plugins.
+ * AK: Extended factory for controller plugins.
  *
  * PHP version 7
  *
- * Copyright (C) Villanova University 2014.
+ * Copyright (C) AK Bibliothek Wien 2019.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -19,32 +19,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @category VuFind
- * @package  View_Helpers
- * @author   Demian Katz <demian.katz@villanova.edu>
- * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org/wiki/development Wiki
+ * @category AKsearch
+ * @package  Controller_Plugins
+ * @author   Michael Birkner <michael.birkner@akwien.at>
+ * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
+ * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
 namespace AkSearch\Controller\Plugin;
 
 use Zend\ServiceManager\ServiceManager;
 
 /**
- * Factory for controller plugins.
+ * AK: Extending factory for controller plugins.
  *
- * @category VuFind
- * @package  View_Helpers
- * @author   Demian Katz <demian.katz@villanova.edu>
- * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org/wiki/development Wiki
+ * @category AKsearch
+ * @package  Controller_Plugins
+ * @author   Michael Birkner <michael.birkner@akwien.at>
+ * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
+ * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  *
  * @codeCoverageIgnore
  */
-class Factory
+class Factory extends \VuFind\Controller\Plugin\Factory
 {
     
     /**
      * Construct the NewItems plugin.
+     * AK: Use the NewItems plugin from the AkSearch module.
      *
      * @param ServiceManager $sm Service manager.
      *
