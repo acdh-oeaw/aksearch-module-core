@@ -1,6 +1,6 @@
 <?php
 /**
- * AK: Extended default Controller
+ * AK: Extended default search controller
  *
  * PHP version 7
  *
@@ -78,13 +78,17 @@ class SearchController extends \VuFind\Controller\SearchController
             return $this->forwardTo('Search', 'NewItemResults');
         }
 
+        // AK: Get config for a datepicker (or empty array if no datepicker is used)
+        $datePickerConfig = $this->newItems()->getDatepickerConfig();
+
         // AK: Add the facet list to the New Itemsview so that we can use it there
         //     (see themes/AkSearch/templates/search/newitem.phtml)
         return $this->createViewModel(
             [
                 'fundList' => $this->newItems()->getFundList(),
                 'ranges' => $this->newItems()->getRanges(),
-                'facetList' => $facetList
+                'facetList' => $facetList,
+                'datePickerConfig' => $datePickerConfig
             ]
         );
     }

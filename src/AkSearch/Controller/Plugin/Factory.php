@@ -56,8 +56,9 @@ class Factory extends \VuFind\Controller\Plugin\Factory
         $search = $sm->get('VuFind\Config\PluginManager')->get('searches');
         $config = isset($search->NewItem)
             ? $search->NewItem : new \Zend\Config\Config([]);
+        $siteConfig = $sm->get('VuFind\Config\PluginManager')->get('config')->Site;
 
-        return new NewItems($config);
+        return new NewItems($config, $siteConfig);
     }
 
 }
