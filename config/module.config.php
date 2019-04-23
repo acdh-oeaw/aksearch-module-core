@@ -5,10 +5,15 @@ namespace AkSearch\Module\Configuration;
 $config = [
     'controllers' => [
         'factories' => [
+            'AkSearch\Controller\AlmaController' => 'VuFind\Controller\AbstractBaseFactory',
+            'AkSearch\Controller\InstallController' => 'VuFind\Controller\AbstractBaseFactory',
+            'AkSearch\Controller\MyResearchController' => 'VuFind\Controller\AbstractBaseFactory',
             'AkSearch\Controller\SearchController' => 'VuFind\Controller\AbstractBaseFactory'
-
         ],
         'aliases' => [
+            'VuFind\Controller\AlmaController' => 'AkSearch\Controller\AlmaController',
+            'VuFind\Controller\InstallController' => 'AkSearch\Controller\InstallController',
+            'VuFind\Controller\MyResearchController' => 'AkSearch\Controller\MyResearchController',
             'VuFind\Controller\SearchController' => 'AkSearch\Controller\SearchController'
         ]
     ],
@@ -22,10 +27,25 @@ $config = [
     ],
     'vufind' => [
         'plugin_managers' => [
+            'db_row' => [
+                'factories' => [
+                    'AkSearch\Db\Row\Loans' => 'VuFind\Db\Row\RowGatewayFactory'
+                ],
+                'aliases' => [
+                    'loans' => 'AkSearch\Db\Row\Loans'
+                ]
+            ],
+            'db_table' => [
+                'factories' => [
+                    'AkSearch\Db\Table\Loans' => 'VuFind\Db\Table\GatewayFactory'
+                ],
+                'aliases' => [
+                    'loans' => 'AkSearch\Db\Table\Loans'
+                ]
+            ],
             'ils_driver' => [
                 'factories' => [
                     'AkSearch\ILS\Driver\Alma' => 'VuFind\ILS\Driver\AlmaFactory'
-
                 ],
                 'aliases' => [
                     'VuFind\ILS\Driver\Alma' => 'AkSearch\ILS\Driver\Alma'
@@ -66,5 +86,12 @@ $config = [
         ]
     ]
 ];
+
+$staticRoutes = [
+    'Install/FixLoanHistoryTable'
+];
+
+$routeGenerator = new \VuFind\Route\RouteGenerator();
+$routeGenerator->addStaticRoutes($config, $staticRoutes);
 
 return $config;
