@@ -191,9 +191,12 @@ class Alma
                 $sort
             );
         } catch (\Exception $e) {
-            throw new \VuFind\Exception\ILS(
-                'Error when retrieving loans for user ' .
-                $patron['cat_username'] . ': ' . $e->getMessage());
+            $errorMessage = 'Error when retrieving loans for user '
+                . $patron['cat_username'] . '.';
+            error_log($errorMessage . ' Check if the database for saving loans '
+                . 'exists and is configured properly. Exception Message: '
+                . $e->getMessage());
+            throw new \VuFind\Exception\ILS($errorMessage);
         }
         
         // Map array from MySQL result to an array formatted as documented
