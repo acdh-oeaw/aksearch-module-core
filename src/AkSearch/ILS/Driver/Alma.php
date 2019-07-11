@@ -46,6 +46,152 @@ class Alma
     use \VuFind\Db\Table\DbTableAwareTrait;
     use \VuFind\I18n\Translator\TranslatorAwareTrait;
 
+
+    /**
+     * Create a user in Alma via API call
+     *
+     * @param array $formParams The data from the "create new account" form
+     *
+     * @throws \VuFind\Exception\Auth
+     *
+     * @return NULL|SimpleXMLElement
+     * @author Michael Birkner
+     */
+    public function createAlmaUser($formParams)
+    {
+        // Get config for creating new Alma users from Alma.ini
+        $newUserConfig = $this->config['NewUser'];
+
+        // Check if config params are all set
+        $configParams = [
+            'recordType', 'userGroup', 'preferredLanguage',
+            'accountType', 'status', 'emailType', 'idType'
+        ];
+        foreach ($configParams as $configParam) {
+            if (!isset($newUserConfig[$configParam])
+                || empty(trim($newUserConfig[$configParam]))
+            ) {
+                $errorMessage = 'Configuration "' . $configParam . '" is not set ' .
+                                'in Alma.ini in the [NewUser] section!';
+                error_log('[ALMA]: ' . $errorMessage);
+                throw new \VuFind\Exception\Auth($errorMessage);
+            }
+        }
+
+        // Check if files are of correct mime type
+        if ($residenceRegistrationCardSending && !empty($residenceRegistrationCard['name'])) {
+            $mimeTypeValidator = new \Zend\Validator\File\MimeType(
+                array(
+                    'image/jpg',
+                    'image/jpeg',
+                    'image/png',
+                    'image/tiff',
+                    'image/tif',
+                    'image/bmp',
+                    'application/pdf'
+                ));
+            
+            if (!$mimeTypeValidator->isValid($residenceRegistrationCard['tmp_name'])) {
+                $errorMsg[] = $this->translate('residenceRegistrationCardError');
+                $formError = true;
+            }
+        }
+
+        // Calculate expiry date based on config in Alma.ini
+        $dateNow = new \DateTime('now');
+        $expiryDate = null;
+        if (isset($newUserConfig['expiryDate'])
+            && !empty(trim($newUserConfig['expiryDate']))
+        ) {
+            try {
+                $expiryDate = $dateNow->add(
+                    new \DateInterval($newUserConfig['expiryDate'])
+                );
+            } catch (\Exception $exception) {
+                $errorMessage = 'Configuration "expiryDate" in Alma.ini (see ' .
+                                '[NewUser] section) has the wrong format!';
+                error_log('[ALMA]: ' . $errorMessage);
+                throw new \VuFind\Exception\Auth($errorMessage);
+            }
+        } else {
+            $expiryDate = $dateNow->add(new \DateInterval('P1Y'));
+        }
+        $expiryDateXml = ($expiryDate != null)
+                 ? '<expiry_date>' . $expiryDate->format('Y-m-d') . 'Z</expiry_date>'
+                 : '';
+
+        // Calculate purge date based on config in Alma.ini
+        $purgeDate = null;
+        if (isset($newUserConfig['purgeDate'])
+            && !empty(trim($newUserConfig['purgeDate']))
+        ) {
+            try {
+                $purgeDate = $dateNow->add(
+                    new \DateInterval($newUserConfig['purgeDate'])
+                );
+            } catch (\Exception $exception) {
+                $errorMessage = 'Configuration "purgeDate" in Alma.ini (see ' .
+                                '[NewUser] section) has the wrong format!';
+                error_log('[ALMA]: ' . $errorMessage);
+                throw new \VuFind\Exception\Auth($errorMessage);
+            }
+        }
+        $purgeDateXml = ($purgeDate != null)
+                    ? '<purge_date>' . $purgeDate->format('Y-m-d') . 'Z</purge_date>'
+                    : '';
+
+        // Create user XML for Alma API
+        $userXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<user>'
+        . '<record_type>' . $this->config['NewUser']['recordType'] . '</record_type>'
+        . '<first_name>' . $formParams['firstname'] . '</first_name>'
+        . '<last_name>' . $formParams['lastname'] . '</last_name>'
+        . '<user_group>' . $this->config['NewUser']['userGroup'] . '</user_group>'
+        . '<preferred_language>' . $this->config['NewUser']['preferredLanguage'] .
+          '</preferred_language>'
+        . $expiryDateXml
+        . $purgeDateXml
+        . '<account_type>' . $this->config['NewUser']['accountType'] .
+          '</account_type>'
+        . '<status>' . $this->config['NewUser']['status'] . '</status>'
+        . '<contact_info>'
+        . '<emails>'
+        . '<email preferred="true">'
+        . '<email_address>' . $formParams['email'] . '</email_address>'
+        . '<email_types>'
+        . '<email_type>' . $this->config['NewUser']['emailType'] . '</email_type>'
+        . '</email_types>'
+        . '</email>'
+        . '</emails>'
+        . '</contact_info>'
+        . '<user_identifiers>'
+        . '<user_identifier>'
+        . '<id_type>' . $this->config['NewUser']['idType'] . '</id_type>'
+        . '<value>' . $formParams['username'] . '</value>'
+        . '</user_identifier>'
+        . '</user_identifiers>'
+        . '</user>';
+
+        // Remove whitespaces from XML
+        $userXml = preg_replace("/\n/i", "", $userXml);
+        $userXml = preg_replace("/>\s*</i", "><", $userXml);
+
+        // Create user in Alma
+        $almaAnswer = $this->makeRequest(
+            '/users',
+            [],
+            [],
+            'POST',
+            $userXml,
+            ['Content-Type' => 'application/xml']
+        );
+
+        // Return the XML from Alma on success. On error, an exception is thrown
+        // in makeRequest
+        return $almaAnswer;
+    }
+
+
     /**
      * Get Patron Profile
      *

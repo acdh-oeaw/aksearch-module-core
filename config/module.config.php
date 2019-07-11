@@ -27,6 +27,14 @@ $config = [
     ],
     'vufind' => [
         'plugin_managers' => [
+            'auth' => [
+                'factories' => [
+                    'AkSearch\Auth\AlmaDatabase' => 'AkSearch\Auth\Factory::getAlmaDatabase'
+                ],
+                'aliases' => [
+                    'almadatabase' => 'AkSearch\Auth\AlmaDatabase'
+                ]
+            ],
             'db_row' => [
                 'factories' => [
                     'AkSearch\Db\Row\Loans' => 'VuFind\Db\Row\RowGatewayFactory'
