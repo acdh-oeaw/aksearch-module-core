@@ -25,6 +25,16 @@ $config = [
             'newItems' => 'AkSearch\Controller\Plugin\NewItems'
         ],
     ],
+    'service_manager' => [
+        'factories' => [
+            'AkSearch\Auth\Manager' => 'VuFind\Auth\ManagerFactory',
+            'AkSearch\Mailer\Mailer' => 'VuFind\Mailer\Factory'
+        ],
+        'aliases' => [
+            'VuFind\Auth\Manager' => 'AkSearch\Auth\Manager',
+            'VuFind\Mailer' => 'AkSearch\Mailer\Mailer'
+        ],
+    ],
     'vufind' => [
         'plugin_managers' => [
             'auth' => [

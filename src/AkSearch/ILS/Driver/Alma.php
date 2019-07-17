@@ -48,6 +48,9 @@ class Alma
 
 
     /**
+     * FIXME: This method must be totally rewritten. This is probably just a copy
+     * of the old method!
+
      * Create a user in Alma via API call
      *
      * @param array $formParams The data from the "create new account" form
@@ -59,6 +62,7 @@ class Alma
      */
     public function createAlmaUser($formParams)
     {
+
         // Get config for creating new Alma users from Alma.ini
         $newUserConfig = $this->config['NewUser'];
 
@@ -75,25 +79,6 @@ class Alma
                                 'in Alma.ini in the [NewUser] section!';
                 error_log('[ALMA]: ' . $errorMessage);
                 throw new \VuFind\Exception\Auth($errorMessage);
-            }
-        }
-
-        // Check if files are of correct mime type
-        if ($residenceRegistrationCardSending && !empty($residenceRegistrationCard['name'])) {
-            $mimeTypeValidator = new \Zend\Validator\File\MimeType(
-                array(
-                    'image/jpg',
-                    'image/jpeg',
-                    'image/png',
-                    'image/tiff',
-                    'image/tif',
-                    'image/bmp',
-                    'application/pdf'
-                ));
-            
-            if (!$mimeTypeValidator->isValid($residenceRegistrationCard['tmp_name'])) {
-                $errorMsg[] = $this->translate('residenceRegistrationCardError');
-                $formError = true;
             }
         }
 
