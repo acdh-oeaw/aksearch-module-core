@@ -28,6 +28,8 @@
 
 namespace AkSearch\ILS\Driver;
 
+use SimpleXMLElement;
+
 /**
  * AK: Extending Alma ILS Driver
  *
@@ -48,25 +50,21 @@ class Alma
 
 
     /**
-     * FIXME: This method must be totally rewritten. This is probably just a copy
-     * of the old method!
-
      * Create a user in Alma via API call
      *
-     * @param array $formParams The data from the "create new account" form
+     * @param array $allParams All data from the "create new account" form
      *
      * @throws \VuFind\Exception\Auth
      *
      * @return NULL|SimpleXMLElement
      * @author Michael Birkner
      */
-    public function createAlmaUser($formParams)
+    public function createAlmaUser($allParams)
     {
-
         // Get config for creating new Alma users from Alma.ini
         $newUserConfig = $this->config['NewUser'];
-
-        // Check if config params are all set
+        
+        // Check if all necessary configs are set
         $configParams = [
             'recordType', 'userGroup', 'preferredLanguage',
             'accountType', 'status', 'emailType', 'idType'
@@ -82,99 +80,159 @@ class Alma
             }
         }
 
-        // Calculate expiry date based on config in Alma.ini
-        $dateNow = new \DateTime('now');
-        $expiryDate = null;
-        if (isset($newUserConfig['expiryDate'])
-            && !empty(trim($newUserConfig['expiryDate']))
-        ) {
-            try {
-                $expiryDate = $dateNow->add(
-                    new \DateInterval($newUserConfig['expiryDate'])
-                );
-            } catch (\Exception $exception) {
-                $errorMessage = 'Configuration "expiryDate" in Alma.ini (see ' .
-                                '[NewUser] section) has the wrong format!';
-                error_log('[ALMA]: ' . $errorMessage);
-                throw new \VuFind\Exception\Auth($errorMessage);
-            }
-        } else {
-            $expiryDate = $dateNow->add(new \DateInterval('P1Y'));
-        }
-        $expiryDateXml = ($expiryDate != null)
-                 ? '<expiry_date>' . $expiryDate->format('Y-m-d') . 'Z</expiry_date>'
-                 : '';
+        // Get current date
+        $dateToday = date('Y-m-d');
 
-        // Calculate purge date based on config in Alma.ini
-        $purgeDate = null;
-        if (isset($newUserConfig['purgeDate'])
-            && !empty(trim($newUserConfig['purgeDate']))
-        ) {
-            try {
-                $purgeDate = $dateNow->add(
-                    new \DateInterval($newUserConfig['purgeDate'])
-                );
-            } catch (\Exception $exception) {
-                $errorMessage = 'Configuration "purgeDate" in Alma.ini (see ' .
-                                '[NewUser] section) has the wrong format!';
-                error_log('[ALMA]: ' . $errorMessage);
-                throw new \VuFind\Exception\Auth($errorMessage);
+        // Calculate gender from form value
+        $genders = ['m' => 'MALE', 'f' => 'FEMALE', 'd' => 'OTHER'];
+        $gender = $genders[$allParams['salutation']] ?? 'NONE';
+
+        // Convert birthday to Alma date format
+        $birthday = $allParams['birthday'] ?? null;
+        $birthdayTs = null;
+        if ($birthday != null) {
+            $birthdayTs = strtotime($birthday);
+        }
+        $birthdayAlma = ($birthdayTs != null) ? date('Y-m-d', $birthdayTs) : null;
+
+        // Get expiry date and purge date in Alma date format
+        $expiryDate = ($this->getExpiryDate())
+            ? $this->getExpiryDate()->format('Y-m-d')
+            : null;
+        $purgeDate = ($this->getPurgeDate())
+            ? $this->getPurgeDate()->format('Y-m-d')
+            : null;
+
+        // Get statistical values
+        $statArr = [];
+        foreach ($allParams as $key => $statValue) {
+            $keyParts = explode('_', $key);
+            if ($keyParts[count($keyParts)-1] === 'almastat') {
+                $lengthWithoutSuffix = (strlen($key)-strlen('_almastat'));
+                $statName = substr($key, 0, $lengthWithoutSuffix);
+                if ($statValue != null && !empty($statValue)) {
+                    $statArr[$statName] = $statValue;
+                }
             }
         }
-        $purgeDateXml = ($purgeDate != null)
-                    ? '<purge_date>' . $purgeDate->format('Y-m-d') . 'Z</purge_date>'
-                    : '';
 
-        // Create user XML for Alma API
-        $userXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        . '<user>'
-        . '<record_type>' . $this->config['NewUser']['recordType'] . '</record_type>'
-        . '<first_name>' . $formParams['firstname'] . '</first_name>'
-        . '<last_name>' . $formParams['lastname'] . '</last_name>'
-        . '<user_group>' . $this->config['NewUser']['userGroup'] . '</user_group>'
-        . '<preferred_language>' . $this->config['NewUser']['preferredLanguage'] .
-          '</preferred_language>'
-        . $expiryDateXml
-        . $purgeDateXml
-        . '<account_type>' . $this->config['NewUser']['accountType'] .
-          '</account_type>'
-        . '<status>' . $this->config['NewUser']['status'] . '</status>'
-        . '<contact_info>'
-        . '<emails>'
-        . '<email preferred="true">'
-        . '<email_address>' . $formParams['email'] . '</email_address>'
-        . '<email_types>'
-        . '<email_type>' . $this->config['NewUser']['emailType'] . '</email_type>'
-        . '</email_types>'
-        . '</email>'
-        . '</emails>'
-        . '</contact_info>'
-        . '<user_identifiers>'
-        . '<user_identifier>'
-        . '<id_type>' . $this->config['NewUser']['idType'] . '</id_type>'
-        . '<value>' . $formParams['username'] . '</value>'
-        . '</user_identifier>'
-        . '</user_identifiers>'
-        . '</user>';
-
-        // Remove whitespaces from XML
-        $userXml = preg_replace("/\n/i", "", $userXml);
-        $userXml = preg_replace("/>\s*</i", "><", $userXml);
-
-        // Create user in Alma
-        $almaAnswer = $this->makeRequest(
-            '/users',
-            [],
-            [],
-            'POST',
-            $userXml,
-            ['Content-Type' => 'application/xml']
+        // Get the AlmaUserObject.xml file from the given theme and convert it to
+        // a simple XML object
+        $theme = $this->configLoader->get('config')->Site->theme ?? 'root';
+        $almaUserObj = simplexml_load_file(
+            "themes/".$theme."/templates/Auth/AlmaDatabase/AlmaUserObject.xml"
         );
 
-        // Return the XML from Alma on success. On error, an exception is thrown
-        // in makeRequest
+        // Set values to the simple XML object
+        $almaUserObj->record_type = $newUserConfig['recordType'];
+        $almaUserObj->first_name = $allParams['firstname'];
+        $almaUserObj->last_name = $allParams['lastname'];
+        $almaUserObj->gender = $gender;
+        $almaUserObj->user_group = $newUserConfig['userGroup'];
+        $almaUserObj->preferred_language = $newUserConfig['preferredLanguage'];
+        $almaUserObj->birth_date = $birthdayAlma;
+        $almaUserObj->expiry_date = $expiryDate;
+        $almaUserObj->purge_date = $purgeDate;
+        $almaUserObj->account_type = $newUserConfig['accountType'];
+        $almaUserObj->status = $newUserConfig['status'];
+        $almaUserObj->contact_info->addresses->address->line1 = $allParams['street'];
+        $almaUserObj->contact_info->addresses->address->line2 = 
+            $allParams['zip'] . ' ' . $allParams['city'];
+        $almaUserObj->contact_info->addresses->address->city =
+            $allParams['city'];
+        $almaUserObj->contact_info->addresses->address->postal_code =
+            $allParams['zip'];
+        $almaUserObj->contact_info->addresses->address->start_date =
+            $dateToday;
+        $almaUserObj->contact_info->addresses->address->address_types->address_type =
+            $newUserConfig['addressType'];
+        $almaUserObj->contact_info->emails->email->email_address =
+            $allParams['email'];
+        $almaUserObj->contact_info->emails->email->email_types->email_type =
+            $newUserConfig['emailType'];
+        $almaUserObj->contact_info->phones->phone->phone_number =
+            $allParams['phone'];
+        $almaUserObj->contact_info->phones->phone->phone_types->phone_type =
+            $newUserConfig['phoneType'];
+        $almaUserObj->user_identifiers->user_identifier->id_type =
+            $newUserConfig['idType'];
+        $almaUserObj->user_identifiers->user_identifier->value =
+            $allParams['username'];
+
+        // Add statistic values if applicable
+        if (!empty($statArr)) {
+            // Create parent statistic element
+            $almaUserObj->addChild('user_statistics');
+
+            // For each given statistic value, create a basic statitic element with
+            // the necessary child elements and add it to the parent element.
+            // INFO: The data can't be added in this step because we have duplicate
+            //       elements. Depending on the acutal implementation, we either
+            //       would get an error or the data would be overwritten.
+            for ($i = 0; $i < count($statArr); $i++) {
+                $statObj = $almaUserObj->user_statistics->addChild('user_statistic');
+                $statObj->addAttribute('segment_type', 'Internal');
+                // Add child elements to basic statistic element
+                $statObj->addChild('category_type');
+                $statObj->addChild('statistic_category');
+            }
+
+            // Add the data to the statistic elements that were created before
+            $counter = 0;
+            foreach ($statArr as $statName => $statValue) {
+                $almaUserObj->user_statistics->user_statistic[$counter]
+                    ->category_type = $statName;
+                $almaUserObj->user_statistics->user_statistic[$counter]
+                    ->statistic_category = $statValue;
+                $counter++;
+            }
+        }
+
+        // Add user block element if applicable
+        if (filter_var(($newUserConfig['blockUser'] ?? false),
+            FILTER_VALIDATE_BOOLEAN)
+        ) {
+            // Create basic user block element
+            $almaUserObj->addChild('user_blocks')->addChild('user_block')
+                ->addAttribute('segment_type', 'Internal');
+            
+            // Add child elements to basic user block element
+            $almaUserObj->user_blocks->user_block->addChild('block_type');
+            $almaUserObj->user_blocks->user_block->addChild('block_description');
+            $almaUserObj->user_blocks->user_block->addChild('block_status');
+            $almaUserObj->user_blocks->user_block->addChild('block_note');
+            $almaUserObj->user_blocks->user_block->addChild('created_by');
+            
+            // Add values to user block elements
+            $almaUserObj->user_blocks->user_block->block_type =
+                $newUserConfig['blockTypeCode'];
+            $almaUserObj->user_blocks->user_block->block_description =
+                $newUserConfig['blockDescriptionCode'];
+            $almaUserObj->user_blocks->user_block->block_status =
+                $newUserConfig['blockStatus'];
+            $almaUserObj->user_blocks->user_block->block_note =
+                $newUserConfig['blockNote'];
+            $almaUserObj->user_blocks->user_block->created_by =
+                $newUserConfig['blockCreatedBy'];
+        }
+        
+        // Convert simple XML element to string
+        $almaUserObjStr = $almaUserObj->asXML();
+
+        // Remove whitespaces from XML string
+        $almaUserObjStr = preg_replace("/\n/", "", $almaUserObjStr);
+        $almaUserObjStr = preg_replace("/>\s*</", "><", $almaUserObjStr);
+        
+        // Create user in Alma via API by POSTing the user XML
+        $almaAnswer = $this->makeRequest('/users', [], [], 'POST', $almaUserObjStr,
+            ['Content-Type' => 'application/xml']);
+
+        // Return the XML anser from Alma on success. On error, an exception is
+        // thrown in makeRequest.
         return $almaAnswer;
     }
+
+
 
 
     /**
@@ -655,6 +713,84 @@ class Alma
         return isset($this->config[$function])
             ? $this->config[$function]
             : false;
+    }
+
+    /**
+     * AK: Calculate expiry date of new user account based on the value set in
+     *     Alma.ini
+     *
+     * @return \DateTime|null The calculated date/time or null
+     */
+    public function getExpiryDate()
+    {
+        // Get NewUser config from Alma.ini
+        $newUserConfig = $this->config['NewUser'];
+
+        // Create a new DateTime object for "now"
+        $dateNow = new \DateTime('now');
+
+        // Initialize return variable
+        $expiryDate = null;
+
+        if (
+            isset($newUserConfig['expiryDate'])
+            && !empty(trim($newUserConfig['expiryDate']))
+        ) {
+            try {
+                // Add the date interval given in Alma.ini to "now"
+                $expiryDate = $dateNow->add(
+                    new \DateInterval($newUserConfig['expiryDate'])
+                );
+            } catch (\Exception $exception) {
+                $errorMessage = 'Configuration "expiryDate" in Alma.ini (see ' .
+                    '[NewUser] section) has the wrong format!';
+                error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
+                    . $exception->getMessage());
+                throw new \VuFind\Exception\Auth($errorMessage);
+            }
+        } else {
+            // Default: Add 1 year to "now"
+            $expiryDate = $dateNow->add(new \DateInterval('P1Y'));
+        }
+
+        return $expiryDate;
+    }
+
+    /**
+     * AK: Calculate purge date of new user account based on the value set in
+     *     Alma.ini
+     *
+     * @return \DateTime|null The calculated date/time or null
+     */
+    public function getPurgeDate()
+    {
+        // Get NewUser config from Alma.ini
+        $newUserConfig = $this->config['NewUser'];
+
+        // Create a new DateTime object for "now"
+        $dateNow = new \DateTime('now');
+
+        // Initialize return variable
+        $purgeDate = null;
+
+        if (isset($newUserConfig['purgeDate'])
+            && !empty(trim($newUserConfig['purgeDate']))
+        ) {
+            try {
+                // Add the date interval given in Alma.ini to "now"
+                $purgeDate = $dateNow->add(
+                    new \DateInterval($newUserConfig['purgeDate'])
+                );
+            } catch (\Exception $exception) {
+                $errorMessage = 'Configuration "purgeDate" in Alma.ini (see ' .
+                                '[NewUser] section) has the wrong format!';
+                error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
+                    . $exception->getMessage());
+                throw new \VuFind\Exception\Auth($errorMessage);
+            }
+        }
+
+        return $purgeDate;
     }
 
 }

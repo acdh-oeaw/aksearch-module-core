@@ -27,6 +27,8 @@
  */
 namespace AkSearch\Controller;
 
+use VuFind\Exception\Auth as AuthException;
+
 /**
  * AK: Extending controller for the user account area.
  *
@@ -64,27 +66,25 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
 
         // Make view
         $view = $this->createViewModel();
+
         // Password policy
         $view->passwordPolicy = $this->getAuthManager()
             ->getPasswordPolicy($method);
+
         // Set up reCaptcha
         $view->useRecaptcha = $this->recaptcha()->active('newAccount');
+
         // Pass request to view so we can repopulate user parameters in form:
         $view->request = $this->getRequest()->getPost();
+
         // Process request, if necessary:
         if ($this->formWasSubmitted('submit', $view->useRecaptcha)) {
             try {
-
                 // AK: Get the request object
                 $request = $this->getRequest();
-                
-                // AK: Create the user for the particular auth method
-                // TODO: COMMENTED FOR TESTING!
-                //$user = $this->getAuthManager()->create($request);
 
-                // TODO: TESTING WITH GIVEN USER - USE NEWLY CREATED USER IN
-                //       PRODUCTION
-                $user = $this->getTable('user')->getByUsername('USERNAME');
+                // AK: Create the user for the particular auth method
+                $user = $this->getAuthManager()->create($request);
 
                 // AK: Check if a welcome e-mail should be sent to the user
                 if ($this->getAuthManager()->supportsWelcomeEmail()) {
@@ -96,8 +96,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
                     $this->sendEmailToLibrary($request, $user);
                 }
 
-                // TODO: COMMENTED FOR TESTING!
-                //return $this->forwardTo('MyResearch', 'Home');
+                // TODO: Forward to SUCCESS site!
+                return $this->forwardTo('MyResearch', 'Home');
             } catch (AuthException $e) {
                 $this->flashMessenger()->addMessage($e->getMessage(), 'error');
             }
@@ -122,11 +122,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
      * @return void
      */
     protected function sendEmailToLibrary($request, $user) {
-        // Get attachments from request object
-        $attachments = $request->getFiles();
-
-        // Check attachments (mime type and size)
-        $this->checkAttachments($attachments);
+        // Check attachments (errors, mime type and size)
+        $atts = $this->checkAttachments($request->getFiles());
 
         // Get view renderer
         $renderer = $this->getViewRenderer();
@@ -152,7 +149,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             $config->Authentication->welcome_email_from
                 ?? $config->Site->email
                 ?? null,
-            $subject, $body, null, null, null, $attachments
+            $subject, $body, null, null, null, $atts
         );
     }
 
@@ -203,16 +200,28 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     }
 
     /**
-     * AK: Check if all file attachments have an accepted mime type and are of an
-     *     accepted file size.
+     * AK: Removes attachments with errors. For the remaining attachments: Checks if
+     *     they have an accepted mime type and if they are of an accepted file size.
      *
      * @param \Zend\Stdlib\Parameters $attachments The file object from the request
      * 
      * @throws AuthException
      * 
-     * @return void
+     * @return \Zend\Stdlib\Parameters Valid attachments
      */
     protected function checkAttachments($attachments) {
+        // Create new parameters object for attachements without errors. Erroneous
+        // attachments are mainly from empty file pickers in the form where no file
+        // was chosen.
+        $atts = new \Zend\Stdlib\Parameters();
+        $uploadFileValidator = new \Zend\Validator\File\UploadFile();
+        foreach ($attachments as $key => $attachment) {
+            $isValid = $uploadFileValidator->isValid($attachment);
+            if ($isValid) {
+                $atts->append($attachment);
+            }
+        }
+        
         // Get allowed mime types from config
         $allowedMimeTypesConf =
             $this->almaConfig['NewUser']['fileAttachmentMimeTypes'] ?? '';
@@ -223,27 +232,25 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         // Get allowed file size. Default is 10MB if not set.
         $allowedSize = $this->almaConfig['NewUser']['fileAttachmentSize'] ?? '10MB';
 
-        foreach ($attachments as $attachment) {
-            if (!empty($attachment['name'])) {
-                // Validate mime type
-                if ($allowedMimeTypes) {
-                    $mimeTypeValidator = new \Zend\Validator\File\MimeType(
-                        $allowedMimeTypes
-                    );
-                    if (!$mimeTypeValidator->isValid($attachment['tmp_name'])) {
-                        throw new AuthException('mimeTypeError');
-                    }
-                }
-
-                // Validate size
-                $sizeValidator = new \Zend\Validator\File\Size(
-                    ['max' => $allowedSize]
+        foreach ($atts as $att) {
+            // Validate mime type
+            if ($allowedMimeTypes) {
+                $mimeTypeValidator = new \Zend\Validator\File\MimeType(
+                    $allowedMimeTypes
                 );
-                if (!$sizeValidator->isValid($attachment['tmp_name'])) {
-                    throw new AuthException('sizeError');
+                if (!$mimeTypeValidator->isValid($att)) {
+                    throw new AuthException('mimeTypeError');
                 }
             }
+
+            // Validate size
+            $sizeValidator = new \Zend\Validator\File\Size(['max' => $allowedSize]);
+            if (!$sizeValidator->isValid($att)) {
+                throw new AuthException('sizeError');
+            }
         }
+
+        return $atts;
     }
 
     /**
@@ -394,6 +401,44 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
 
         // AK: Return the view model
         return $view;
+    }
+
+
+    /**
+     * Execute the request
+     * AK: Also get technical failure message on whoops error pages
+     *
+     * @param \Zend\Mvc\MvcEvent $event Event
+     *
+     * @return mixed
+     * @throws Exception\DomainException
+     */
+    public function onDispatch(\Zend\Mvc\MvcEvent $event)
+    {
+        // Catch any ILSExceptions thrown during processing and display a generic
+        // failure message to the user (instead of going to the fatal exception
+        // screen). This offers a slightly more forgiving experience when there is
+        // an unexpected ILS issue. Note that most ILS exceptions are handled at a
+        // lower level in the code (see \VuFind\ILS\Connection and the config.ini
+        // loadNoILSOnFailure setting), but there are some rare edge cases (for
+        // example, when the MultiBackend driver fails over to NoILS while used in
+        // combination with MultiILS authentication) that could lead here.
+
+        try {
+            // AK: Get parents parent because we need to catch their exeptions
+            $grandParentClass = get_parent_class(parent::class);
+            return $grandParentClass::onDispatch($event);
+        } catch (ILSException $exception) {
+            // Always display generic message:
+            $this->flashMessenger()->addErrorMessage('ils_connection_failed');
+            // In development mode, also show technical failure message:
+            if ('development' == APPLICATION_ENV) {
+                $this->flashMessenger()->addErrorMessage($exception->getMessage());
+                // AK: Throw exception with correct error message for whoops
+                throw new \ILSException($exception->getMessage());
+            }
+            return $this->createViewModel();
+        }
     }
 
 

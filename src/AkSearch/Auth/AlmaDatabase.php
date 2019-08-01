@@ -74,22 +74,22 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         // AK: Get POST values and merge them with the params array into one array
         //     so that we can pass all together to the Alma driver for creating an
         //     account in Alma.
-        // TODO: COMMENTED FOR TESTING!!!
-        //$allValues = array_merge($request->getPost()->toArray(), $params);
-        //var_dump($allValues);
+        $allParams = array_merge($request->getPost()->toArray(), $params);
 
         /*
         // TODO: COMMENTED FOR TESTING!!!
         // Validate username and password
+        // AK Info: Ensures that values are not blank and passwords match.
         $this->validateUsernameAndPassword($params);
 
         // Make sure parameters are correct
         // AK Info: This ensures that the username (= barcode) and eMail address
         //          are unique in the database.
         $this->validateParams($params, $userTable);
+        */
 
         // Create user account in Alma
-        $almaAnswer = $this->almaDriver->createAlmaUser($params);
+        $almaAnswer = $this->almaDriver->createAlmaUser($allParams);
 
         // Create user account in VuFind user table if Alma gave us an answer
         if ($almaAnswer !== null) {
@@ -98,6 +98,27 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
 
             // Add the Alma primary ID as cat_id to the VuFind user table
             $user->cat_id = $almaAnswer->primary_id ?? null;
+
+            // AK: Check if transaction history is enabled
+            if(filter_var(
+                ($this->almaConfig['TransactionHistory']['enabled'] ?? false),
+                FILTER_VALIDATE_BOOLEAN
+                )
+            ) {
+                // Check if user wants to save his transaction history
+                $saveTransactionHistory = filter_var(
+                    ($allParams['loanHistory'] ?? false),
+                    FILTER_VALIDATE_BOOLEAN
+                );
+
+                // Set flag in database
+                try {
+                    $user->save_loans = ($saveTransactionHistory) ? 1 : 0;
+                } catch (\Exception $e) {
+                    throw new AuthException('Error while setting save_loans ' .
+                        'flag for user ' . $params['username']);
+                }
+            };
 
             // Save the new user to the user table
             $user->save();
@@ -108,12 +129,10 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         } else {
             throw new AuthException($this->translate('ils_account_create_error'));
         }
-        */
+        
 
-        // TODO: ONLY FOR TESTING:
-        $user = $this->createUserFromParams($params, $userTable);
-        $user->save();
-        $user->saveCredentials($params['username'], $params['password']);
+        // TODO: Remove after testing!
+        // $user = $userTable->getByUsername('USERNAME', false);
 
         return $user;
     }
@@ -153,8 +172,8 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
     }
 
     /**
-     * AK: Get variables for the e-mail that is sent to the user when a new account is
-     *     created.
+     * AK: Get variables for the e-mail that is sent to the user when a new account
+     *     is created.
      *
      * @param \Zend\Http\Request  $request  Request object from the form
      * @param \VuFind\Db\Row\User $user     User row object from the database
@@ -181,7 +200,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         }
 
         // Get expiry date of new user account and format it
-        $expiryDate = $this->getExpiryDate();
+        $expiryDate = $this->almaDriver->getExpiryDate();
         $expiryDate = ($displayDateFormat)
             ? $expiryDate->format($displayDateFormat)
             : $expiryDate->format('Y-m-d');
@@ -225,7 +244,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         $houseAndUsageRules = ($request->getPost('houseAndUsageRules')) ? $yes : $no;
 
         // Get expiry date of new user account and format it
-        $expiryDate = $this->getExpiryDate();
+        $expiryDate = $this->almaDriver->getExpiryDate();
         $expiryDate = ($displayDateFormat)
             ? $expiryDate->format($displayDateFormat)
             : $expiryDate->format('Y-m-d');
@@ -235,7 +254,8 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         foreach ($request->getPost() as $key => $value) {
             $keyParts = explode('_', $key);
             if ($keyParts[count($keyParts)-1] === 'almastat') {
-                $statisticsArr[] = $this->translate($key).': '.$this->translate($value.'_almastat');
+                $statisticsArr[] = $this->translate($key) . ' = '
+                    . $this->translate($value.'_almastat');
             }
         }
         $statistics = implode('; ', $statisticsArr);
@@ -266,84 +286,6 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         ];
 
         return ['subject' => $subjectVars, 'text' => $textVars];
-    }
-
-    /**
-     * AK: Calculate expiry date of new user account based on the value set in
-     *     Alma.ini
-     *
-     * @return \DateTime|null The calculated date/time or null
-     */
-    protected function getExpiryDate()
-    {
-        // Get NewUser config from Alma.ini
-        $newUserConfig = $this->almaConfig['NewUser'];
-
-        // Create a new DateTime object for "now"
-        $dateNow = new \DateTime('now');
-
-        // Initialize return variable
-        $expiryDate = null;
-
-        if (
-            isset($newUserConfig['expiryDate'])
-            && !empty(trim($newUserConfig['expiryDate']))
-        ) {
-            try {
-                // Add the date interval given in Alma.ini to "now"
-                $expiryDate = $dateNow->add(
-                    new \DateInterval($newUserConfig['expiryDate'])
-                );
-            } catch (\Exception $exception) {
-                $errorMessage = 'Configuration "expiryDate" in Alma.ini (see ' .
-                    '[NewUser] section) has the wrong format!';
-                error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
-                    . $exception->getMessage());
-                throw new \VuFind\Exception\Auth($errorMessage);
-            }
-        } else {
-            // Default: Add 1 year to "now"
-            $expiryDate = $dateNow->add(new \DateInterval('P1Y'));
-        }
-
-        return $expiryDate;
-    }
-
-    /**
-     * AK: Calculate purge date of new user account based on the value set in
-     *     Alma.ini
-     *
-     * @return \DateTime|null The calculated date/time or null
-     */
-    protected function getPurgeDate()
-    {
-        // Get NewUser config from Alma.ini
-        $newUserConfig = $this->almaConfig['NewUser'];
-
-        // Create a new DateTime object for "now"
-        $dateNow = new \DateTime('now');
-
-        // Initialize return variable
-        $purgeDate = null;
-
-        if (isset($newUserConfig['purgeDate'])
-            && !empty(trim($newUserConfig['purgeDate']))
-        ) {
-            try {
-                // Add the date interval given in Alma.ini to "now"
-                $purgeDate = $dateNow->add(
-                    new \DateInterval($newUserConfig['purgeDate'])
-                );
-            } catch (\Exception $exception) {
-                $errorMessage = 'Configuration "purgeDate" in Alma.ini (see ' .
-                                '[NewUser] section) has the wrong format!';
-                error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
-                    . $exception->getMessage());
-                throw new \VuFind\Exception\Auth($errorMessage);
-            }
-        }
-
-        return $purgeDate;
     }
 
     /**
