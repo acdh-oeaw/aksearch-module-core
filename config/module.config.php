@@ -19,7 +19,7 @@ $config = [
     ],
     'controller_plugins' => [
         'factories' => [
-            'AkSearch\Controller\Plugin\NewItems' => 'AkSearch\Controller\Plugin\Factory::getNewItems'
+            'AkSearch\Controller\Plugin\NewItems' => 'AkSearch\Controller\Plugin\NewItemsFactory'
         ],
         'aliases' => [
             'newItems' => 'AkSearch\Controller\Plugin\NewItems'
@@ -39,7 +39,7 @@ $config = [
         'plugin_managers' => [
             'auth' => [
                 'factories' => [
-                    'AkSearch\Auth\AlmaDatabase' => 'AkSearch\Auth\Factory::getAlmaDatabase'
+                    'AkSearch\Auth\AlmaDatabase' => 'VuFind\Auth\ILSFactory'
                 ],
                 'aliases' => [
                     'almadatabase' => 'AkSearch\Auth\AlmaDatabase'
@@ -96,7 +96,7 @@ $config = [
     'zfc_rbac' => [
         'vufind_permission_provider_manager' => [
             'factories' => [
-                'AkSearch\Role\PermissionProvider\Usergroup' => 'AkSearch\Role\PermissionProvider\Factory::getUsergroup',
+                'AkSearch\Role\PermissionProvider\Usergroup' => 'AkSearch\Role\PermissionProvider\UsergroupFactory',
             ],
             'aliases' => [
                 'usergroup' => 'AkSearch\Role\PermissionProvider\Usergroup',
