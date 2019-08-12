@@ -76,8 +76,6 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         //     account in Alma.
         $allParams = array_merge($request->getPost()->toArray(), $params);
 
-        /*
-        // TODO: COMMENTED FOR TESTING!!!
         // Validate username and password
         // AK Info: Ensures that values are not blank and passwords match.
         $this->validateUsernameAndPassword($params);
@@ -86,7 +84,6 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         // AK Info: This ensures that the username (= barcode) and eMail address
         //          are unique in the database.
         $this->validateParams($params, $userTable);
-        */
 
         // Create user account in Alma
         $almaAnswer = $this->almaDriver->createAlmaUser($allParams);
@@ -129,10 +126,6 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         } else {
             throw new AuthException($this->translate('ils_account_create_error'));
         }
-        
-
-        // TODO: Remove after testing!
-        // $user = $userTable->getByUsername('USERNAME', false);
 
         return $user;
     }

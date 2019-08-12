@@ -708,11 +708,21 @@ class Alma
                 'save_loans' => $saveLoans
             ];
         }
-        
-        // Return config by key
-        return isset($this->config[$function])
-            ? $this->config[$function]
-            : false;
+
+        if (isset($this->config[$function])) {
+            $functionConfig = $this->config[$function];
+
+            // Set default value for "itemLimit" in Alma driver
+            if ($function === 'Holds') {
+                $functionConfig['itemLimit'] = $functionConfig['itemLimit']
+                    ?? 10
+                    ?: 10;
+            }
+        } else {
+            $functionConfig = false;
+        }
+
+        return $functionConfig;
     }
 
     /**

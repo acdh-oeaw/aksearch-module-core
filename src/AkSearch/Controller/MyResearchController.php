@@ -98,6 +98,9 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
 
                 // TODO: Forward to SUCCESS site!
                 return $this->forwardTo('MyResearch', 'Home');
+            } catch (AuthEmailNotVerifiedException $e) {
+                $this->sendFirstVerificationEmail($e->user);
+                return $this->redirect()->toRoute('myresearch-emailnotverified');
             } catch (AuthException $e) {
                 $this->flashMessenger()->addMessage($e->getMessage(), 'error');
             }

@@ -61,10 +61,10 @@ class DatepickerFactory implements FactoryInterface
         if (!empty($options)) {
             throw new \Exception('Unexpected options sent to factory.');
         }
-        $config = $container->get('VuFind\Config\PluginManager');
+        $config = $container->get(\VuFind\Config\PluginManager::class);
         $mainConfig = $config->get('config');
         $siteConfig = isset($mainConfig->Site) ? $mainConfig->Site->toArray() : [];
-        $activerUserLanguage = $container->get('Zend\Mvc\I18n\Translator')
+        $activerUserLanguage = $container->get(\Zend\Mvc\I18n\Translator::class)
             ->getLocale();
         return new $requestedName(
             $siteConfig,

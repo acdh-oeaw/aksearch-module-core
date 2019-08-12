@@ -37,7 +37,8 @@ namespace AkSearch\Search\Factory;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:architecture:search_service Wiki
  */
-class SolrDefaultBackendFactory extends \VuFind\Search\Factory\SolrDefaultBackendFactory
+class SolrDefaultBackendFactory extends
+    \VuFind\Search\Factory\SolrDefaultBackendFactory
 {
 
     /**
@@ -53,7 +54,12 @@ class SolrDefaultBackendFactory extends \VuFind\Search\Factory\SolrDefaultBacken
 
         // AK: Get configuration for ID fields to use for retrieving single records
         $searchConfig = $this->config->get($this->searchConfig);
-        $idFields = (isset($searchConfig->AkSearch->idFields) && !empty($searchConfig->AkSearch->idFields)) ? $searchConfig->AkSearch->idFields : 'id'; // Default is "id" Solr field
+        $idFields = (
+                isset($searchConfig->AkSearch->idFields)
+                && !empty($searchConfig->AkSearch->idFields)
+            )
+            ? $searchConfig->AkSearch->idFields
+            : 'id'; // Default is "id" Solr field
     	$this->uniqueKey = $idFields;
 
         $handlers = [
@@ -72,7 +78,9 @@ class SolrDefaultBackendFactory extends \VuFind\Search\Factory\SolrDefaultBacken
         }
 
         $connector = new \AkSearchSearch\Backend\Solr\Connector(
-            $this->getSolrUrl(), new \VuFindSearch\Backend\Solr\HandlerMap($handlers), $this->uniqueKey
+            $this->getSolrUrl(),
+            new \VuFindSearch\Backend\Solr\HandlerMap($handlers),
+            $this->uniqueKey
         );
 
         $connector->setTimeout(
@@ -82,9 +90,10 @@ class SolrDefaultBackendFactory extends \VuFind\Search\Factory\SolrDefaultBacken
         if ($this->logger) {
             $connector->setLogger($this->logger);
         }
-        if ($this->serviceLocator->has('VuFindHttp\HttpService')) {
-            $connector
-                ->setProxy($this->serviceLocator->get('VuFindHttp\HttpService'));
+        if ($this->serviceLocator->has(\VuFindHttp\HttpService::class)) {
+            $connector->setProxy(
+                $this->serviceLocator->get(\VuFindHttp\HttpService::class)
+            );
         }
         return $connector;
     }
