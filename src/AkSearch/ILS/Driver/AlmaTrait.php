@@ -51,6 +51,25 @@ trait AlmaTrait {
         return preg_replace("/([^a-z0-9_\+\-])+/Di", "", $key);
     }
 
+
+    /**
+     * Generate a barcode value with the help of md5 hashing.
+     * 
+     * @param	string	$stringForHash	A string that should be unique (e. g. eMail address + timestamp) from which a barcode (hash) value will be generated
+     * @return	string	The barcode value
+     */
+
+    public function generateBarcode($prefix, $length, $bcChars){
+        $random = "";
+        $alphaNum = $bcChars ?? "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        $maxLength = strlen($alphaNum);
+
+        for ($i=0; $i < $length; $i++) {
+            $random .= $alphaNum[random_int(0, $maxLength-1)];
+        }
+
+        return $prefix.$random;
+    }
 }
 
 ?>

@@ -28,6 +28,8 @@
 
 namespace AkSearch\ILS\Driver;
 
+use SimpleXMLElement;
+
 /**
  * AK: Extending Alma ILS Driver
  *
@@ -45,6 +47,193 @@ class Alma
     use AlmaTrait;
     use \VuFind\Db\Table\DbTableAwareTrait;
     use \VuFind\I18n\Translator\TranslatorAwareTrait;
+
+
+    /**
+     * Create a user in Alma via API call
+     *
+     * @param array $allParams All data from the "create new account" form
+     *
+     * @throws \VuFind\Exception\Auth
+     *
+     * @return NULL|SimpleXMLElement
+     * @author Michael Birkner
+     */
+    public function createAlmaUser($allParams)
+    {
+        // Get config for creating new Alma users from Alma.ini
+        $newUserConfig = $this->config['NewUser'];
+        
+        // Check if all necessary configs are set
+        $configParams = [
+            'recordType', 'userGroup', 'preferredLanguage',
+            'accountType', 'status', 'emailType', 'idType'
+        ];
+        foreach ($configParams as $configParam) {
+            if (!isset($newUserConfig[$configParam])
+                || empty(trim($newUserConfig[$configParam]))
+            ) {
+                $errorMessage = 'Configuration "' . $configParam . '" is not set ' .
+                                'in Alma.ini in the [NewUser] section!';
+                error_log('[ALMA]: ' . $errorMessage);
+                throw new \VuFind\Exception\Auth($errorMessage);
+            }
+        }
+
+        // Get current date
+        $dateToday = date('Y-m-d');
+
+        // Calculate gender from form value
+        $genders = ['m' => 'MALE', 'f' => 'FEMALE', 'd' => 'OTHER'];
+        $gender = $genders[$allParams['salutation']] ?? 'NONE';
+
+        // Convert birthday to Alma date format
+        $birthday = $allParams['birthday'] ?? null;
+        $birthdayTs = null;
+        if ($birthday != null) {
+            $birthdayTs = strtotime($birthday);
+        }
+        $birthdayAlma = ($birthdayTs != null) ? date('Y-m-d', $birthdayTs) : null;
+
+        // Get expiry date and purge date in Alma date format
+        $expiryDate = ($this->getExpiryDate())
+            ? $this->getExpiryDate()->format('Y-m-d')
+            : null;
+        $purgeDate = ($this->getPurgeDate())
+            ? $this->getPurgeDate()->format('Y-m-d')
+            : null;
+
+        // Get statistical values
+        $statArr = [];
+        foreach ($allParams as $key => $statValue) {
+            $keyParts = explode('_', $key);
+            if ($keyParts[count($keyParts)-1] === 'almastat') {
+                $lengthWithoutSuffix = (strlen($key)-strlen('_almastat'));
+                $statName = substr($key, 0, $lengthWithoutSuffix);
+                if ($statValue != null && !empty($statValue)) {
+                    $statArr[$statName] = $statValue;
+                }
+            }
+        }
+
+        // Get the AlmaUserObject.xml file from the given theme and convert it to
+        // a simple XML object
+        $theme = $this->configLoader->get('config')->Site->theme ?? 'root';
+        $almaUserObj = simplexml_load_file(
+            "themes/".$theme."/templates/Auth/AlmaDatabase/AlmaUserObject.xml"
+        );
+
+        // Set values to the simple XML object
+        $almaUserObj->record_type = $newUserConfig['recordType'];
+        $almaUserObj->first_name = $allParams['firstname'];
+        $almaUserObj->last_name = $allParams['lastname'];
+        $almaUserObj->gender = $gender;
+        $almaUserObj->user_group = $newUserConfig['userGroup'];
+        $almaUserObj->preferred_language = $newUserConfig['preferredLanguage'];
+        $almaUserObj->birth_date = $birthdayAlma;
+        $almaUserObj->expiry_date = $expiryDate;
+        $almaUserObj->purge_date = $purgeDate;
+        $almaUserObj->account_type = $newUserConfig['accountType'];
+        $almaUserObj->status = $newUserConfig['status'];
+        $almaUserObj->contact_info->addresses->address->line1 = $allParams['street'];
+        $almaUserObj->contact_info->addresses->address->line2 = 
+            $allParams['zip'] . ' ' . $allParams['city'];
+        $almaUserObj->contact_info->addresses->address->city =
+            $allParams['city'];
+        $almaUserObj->contact_info->addresses->address->postal_code =
+            $allParams['zip'];
+        $almaUserObj->contact_info->addresses->address->start_date =
+            $dateToday;
+        $almaUserObj->contact_info->addresses->address->address_types->address_type =
+            $newUserConfig['addressType'];
+        $almaUserObj->contact_info->emails->email->email_address =
+            $allParams['email'];
+        $almaUserObj->contact_info->emails->email->email_types->email_type =
+            $newUserConfig['emailType'];
+        $almaUserObj->contact_info->phones->phone->phone_number =
+            $allParams['phone'];
+        $almaUserObj->contact_info->phones->phone->phone_types->phone_type =
+            $newUserConfig['phoneType'];
+        $almaUserObj->user_identifiers->user_identifier->id_type =
+            $newUserConfig['idType'];
+        $almaUserObj->user_identifiers->user_identifier->value =
+            $allParams['username'];
+
+        // Add statistic values if applicable
+        if (!empty($statArr)) {
+            // Create parent statistic element
+            $almaUserObj->addChild('user_statistics');
+
+            // For each given statistic value, create a basic statitic element with
+            // the necessary child elements and add it to the parent element.
+            // INFO: The data can't be added in this step because we have duplicate
+            //       elements. Depending on the acutal implementation, we either
+            //       would get an error or the data would be overwritten.
+            for ($i = 0; $i < count($statArr); $i++) {
+                $statObj = $almaUserObj->user_statistics->addChild('user_statistic');
+                $statObj->addAttribute('segment_type', 'Internal');
+                // Add child elements to basic statistic element
+                $statObj->addChild('category_type');
+                $statObj->addChild('statistic_category');
+            }
+
+            // Add the data to the statistic elements that were created before
+            $counter = 0;
+            foreach ($statArr as $statName => $statValue) {
+                $almaUserObj->user_statistics->user_statistic[$counter]
+                    ->category_type = $statName;
+                $almaUserObj->user_statistics->user_statistic[$counter]
+                    ->statistic_category = $statValue;
+                $counter++;
+            }
+        }
+
+        // Add user block element if applicable
+        if (filter_var(($newUserConfig['blockUser'] ?? false),
+            FILTER_VALIDATE_BOOLEAN)
+        ) {
+            // Create basic user block element
+            $almaUserObj->addChild('user_blocks')->addChild('user_block')
+                ->addAttribute('segment_type', 'Internal');
+            
+            // Add child elements to basic user block element
+            $almaUserObj->user_blocks->user_block->addChild('block_type');
+            $almaUserObj->user_blocks->user_block->addChild('block_description');
+            $almaUserObj->user_blocks->user_block->addChild('block_status');
+            $almaUserObj->user_blocks->user_block->addChild('block_note');
+            $almaUserObj->user_blocks->user_block->addChild('created_by');
+            
+            // Add values to user block elements
+            $almaUserObj->user_blocks->user_block->block_type =
+                $newUserConfig['blockTypeCode'];
+            $almaUserObj->user_blocks->user_block->block_description =
+                $newUserConfig['blockDescriptionCode'];
+            $almaUserObj->user_blocks->user_block->block_status =
+                $newUserConfig['blockStatus'];
+            $almaUserObj->user_blocks->user_block->block_note =
+                $newUserConfig['blockNote'];
+            $almaUserObj->user_blocks->user_block->created_by =
+                $newUserConfig['blockCreatedBy'];
+        }
+        
+        // Convert simple XML element to string
+        $almaUserObjStr = $almaUserObj->asXML();
+
+        // Remove whitespaces from XML string
+        $almaUserObjStr = preg_replace("/\n/", "", $almaUserObjStr);
+        $almaUserObjStr = preg_replace("/>\s*</", "><", $almaUserObjStr);
+        
+        // Create user in Alma via API by POSTing the user XML
+        $almaAnswer = $this->makeRequest('/users', [], [], 'POST', $almaUserObjStr,
+            ['Content-Type' => 'application/xml']);
+
+        // Return the XML anser from Alma on success. On error, an exception is
+        // thrown in makeRequest.
+        return $almaAnswer;
+    }
+
+
+
 
     /**
      * Get Patron Profile
@@ -519,11 +708,99 @@ class Alma
                 'save_loans' => $saveLoans
             ];
         }
-        
-        // Return config by key
-        return isset($this->config[$function])
-            ? $this->config[$function]
-            : false;
+
+        if (isset($this->config[$function])) {
+            $functionConfig = $this->config[$function];
+
+            // Set default value for "itemLimit" in Alma driver
+            if ($function === 'Holds') {
+                $functionConfig['itemLimit'] = $functionConfig['itemLimit']
+                    ?? 10
+                    ?: 10;
+            }
+        } else {
+            $functionConfig = false;
+        }
+
+        return $functionConfig;
+    }
+
+    /**
+     * AK: Calculate expiry date of new user account based on the value set in
+     *     Alma.ini
+     *
+     * @return \DateTime|null The calculated date/time or null
+     */
+    public function getExpiryDate()
+    {
+        // Get NewUser config from Alma.ini
+        $newUserConfig = $this->config['NewUser'];
+
+        // Create a new DateTime object for "now"
+        $dateNow = new \DateTime('now');
+
+        // Initialize return variable
+        $expiryDate = null;
+
+        if (
+            isset($newUserConfig['expiryDate'])
+            && !empty(trim($newUserConfig['expiryDate']))
+        ) {
+            try {
+                // Add the date interval given in Alma.ini to "now"
+                $expiryDate = $dateNow->add(
+                    new \DateInterval($newUserConfig['expiryDate'])
+                );
+            } catch (\Exception $exception) {
+                $errorMessage = 'Configuration "expiryDate" in Alma.ini (see ' .
+                    '[NewUser] section) has the wrong format!';
+                error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
+                    . $exception->getMessage());
+                throw new \VuFind\Exception\Auth($errorMessage);
+            }
+        } else {
+            // Default: Add 1 year to "now"
+            $expiryDate = $dateNow->add(new \DateInterval('P1Y'));
+        }
+
+        return $expiryDate;
+    }
+
+    /**
+     * AK: Calculate purge date of new user account based on the value set in
+     *     Alma.ini
+     *
+     * @return \DateTime|null The calculated date/time or null
+     */
+    public function getPurgeDate()
+    {
+        // Get NewUser config from Alma.ini
+        $newUserConfig = $this->config['NewUser'];
+
+        // Create a new DateTime object for "now"
+        $dateNow = new \DateTime('now');
+
+        // Initialize return variable
+        $purgeDate = null;
+
+        if (isset($newUserConfig['purgeDate'])
+            && !empty(trim($newUserConfig['purgeDate']))
+        ) {
+            try {
+                // Add the date interval given in Alma.ini to "now"
+                $purgeDate = $dateNow->add(
+                    new \DateInterval($newUserConfig['purgeDate'])
+                );
+            } catch (\Exception $exception) {
+                $errorMessage = 'Configuration "purgeDate" in Alma.ini (see ' .
+                                '[NewUser] section) has the wrong format!';
+                error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
+                    . $exception->getMessage());
+                throw new \VuFind\Exception\Auth($errorMessage);
+            }
+        }
+
+        return $purgeDate;
     }
 
 }

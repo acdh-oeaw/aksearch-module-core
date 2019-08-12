@@ -203,7 +203,4 @@ class Results extends \VuFind\Search\Solr\Results
         return $list;
     }
 
-    public function setResultTotal(int $resultTotal) {
-        $this->resultTotal = $resultTotal;
-    }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * AK: Extended SearchBox helper factory.
+ * Datepicker helper factory.
  *
  * PHP version 7
  *
@@ -25,12 +25,13 @@
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:view_helpers Wiki
  */
-namespace AkSearch\View\Helper\Root;
+namespace AkSearch\View\Helper\AkSearch;
 
 use Interop\Container\ContainerInterface;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 /**
- * AK: Extending SearchBox helper factory.
+ * Datepicker helper factory.
  *
  * @category AKsearch
  * @package  View_Helpers
@@ -38,7 +39,7 @@ use Interop\Container\ContainerInterface;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:view_helpers Wiki
  */
-class SearchBoxFactory extends \VuFind\View\Helper\Root\SearchBoxFactory
+class DatepickerFactory implements FactoryInterface
 {
     /**
      * Create an object
@@ -62,19 +63,12 @@ class SearchBoxFactory extends \VuFind\View\Helper\Root\SearchBoxFactory
         }
         $config = $container->get(\VuFind\Config\PluginManager::class);
         $mainConfig = $config->get('config');
-        $searchboxConfig = $config->get('searchbox')->toArray();
-        $includeAlphaOptions
-            = $searchboxConfig['General']['includeAlphaBrowse'] ?? false;
-
-        // AK: Additionally passing "$container" to the SearchBox
+        $siteConfig = isset($mainConfig->Site) ? $mainConfig->Site->toArray() : [];
+        $activerUserLanguage = $container->get(\Zend\Mvc\I18n\Translator::class)
+            ->getLocale();
         return new $requestedName(
-            $container->get(\VuFind\Search\Options\PluginManager::class),
-            $searchboxConfig,
-            isset($mainConfig->SearchPlaceholder)
-                ? $mainConfig->SearchPlaceholder->toArray() : [],
-            $includeAlphaOptions && isset($mainConfig->AlphaBrowse_Types)
-                ? $mainConfig->AlphaBrowse_Types->toArray() : [],
-            $container
+            $siteConfig,
+            $activerUserLanguage
         );
     }
 }

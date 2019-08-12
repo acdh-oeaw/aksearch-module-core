@@ -1,6 +1,6 @@
 <?php
 /**
- * AK: Extends default Permission Provider Factory Class.
+ * Factory for instantiating Usergroup permission provider.
  *
  * PHP version 7
  *
@@ -25,13 +25,12 @@
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:permission_providers Wiki
  */
-
 namespace AkSearch\Role\PermissionProvider;
 
-use Zend\ServiceManager\ServiceManager;
+use Interop\Container\ContainerInterface;
 
 /**
- * AK: Extending Permission Provider Factory Class
+ * Factory for instantiating Usergroup permission provider.
  *
  * @category AKsearch
  * @package  Authorization
@@ -41,20 +40,35 @@ use Zend\ServiceManager\ServiceManager;
  *
  * @codeCoverageIgnore
  */
-class Factory extends \VuFind\Role\PermissionProvider\Factory
+class UsergroupFactory implements \Zend\ServiceManager\Factory\FactoryInterface
 {
     /**
-     * AK: Factory for Usergroup. Provides the "usergroup" permission.
+     * Create an object
      *
-     * @param ServiceManager $sm Service manager.
+     * @param ContainerInterface $container     Service manager
+     * @param string             $requestedName Service being created
+     * @param null|array         $options       Extra options (optional)
      *
-     * @return Usergroup
+     * @return object
+     *
+     * @throws ServiceNotFoundException if unable to resolve the service.
+     * @throws ServiceNotCreatedException if an exception is raised when
+     * creating a service.
+     * @throws ContainerException if any other error occurs
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public static function getUsergroup(ServiceManager $sm) {
-    	return new Usergroup(
-            $sm->get('ZfcRbac\Service\AuthorizationService'),
-            $sm->get('VuFind\ILSConnection'),
-            $sm->get('VuFind\Cache\Manager')
+    public function __invoke(ContainerInterface $container, $requestedName,
+        array $options = null
+    ) {
+        if (!empty($options)) {
+            throw new \Exception('Unexpected options passed to factory.');
+        }
+        return new $requestedName(
+            $container->get(\ZfcRbac\Service\AuthorizationService::class),
+            $container->get(\VuFind\ILS\Connection::class),
+            $container->get(\VuFind\Cache\Manager::class)
         );
+
     }
 }

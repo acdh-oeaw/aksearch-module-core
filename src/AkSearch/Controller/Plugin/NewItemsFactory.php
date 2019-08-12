@@ -1,6 +1,6 @@
 <?php
 /**
- * AK: Extended SearchBox helper factory.
+ * AK: Extended factory for NewItems controller plugin.
  *
  * PHP version 7
  *
@@ -20,25 +20,27 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  * @category AKsearch
- * @package  View_Helpers
+ * @package  Controller_Plugins
  * @author   Michael Birkner <michael.birkner@akwien.at>
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org/wiki/development:plugins:view_helpers Wiki
+ * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
-namespace AkSearch\View\Helper\Root;
+namespace AkSearch\Controller\Plugin;
 
 use Interop\Container\ContainerInterface;
+use Zend\ServiceManager\Factory\FactoryInterface;
 
 /**
- * AK: Extending SearchBox helper factory.
+ * AK: Extending factory for NewItems controller plugin.
  *
  * @category AKsearch
- * @package  View_Helpers
+ * @package  Controller_Plugins
  * @author   Michael Birkner <michael.birkner@akwien.at>
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org/wiki/development:plugins:view_helpers Wiki
+ * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
+ *
  */
-class SearchBoxFactory extends \VuFind\View\Helper\Root\SearchBoxFactory
+class NewItemsFactory extends \VuFind\Controller\Plugin\NewItemsFactory
 {
     /**
      * Create an object
@@ -60,21 +62,14 @@ class SearchBoxFactory extends \VuFind\View\Helper\Root\SearchBoxFactory
         if (!empty($options)) {
             throw new \Exception('Unexpected options sent to factory.');
         }
-        $config = $container->get(\VuFind\Config\PluginManager::class);
-        $mainConfig = $config->get('config');
-        $searchboxConfig = $config->get('searchbox')->toArray();
-        $includeAlphaOptions
-            = $searchboxConfig['General']['includeAlphaBrowse'] ?? false;
+        $search
+            = $container->get(\VuFind\Config\PluginManager::class)->get('searches');
+        $config = $search->NewItem ?? new \Zend\Config\Config([]);
 
-        // AK: Additionally passing "$container" to the SearchBox
-        return new $requestedName(
-            $container->get(\VuFind\Search\Options\PluginManager::class),
-            $searchboxConfig,
-            isset($mainConfig->SearchPlaceholder)
-                ? $mainConfig->SearchPlaceholder->toArray() : [],
-            $includeAlphaOptions && isset($mainConfig->AlphaBrowse_Types)
-                ? $mainConfig->AlphaBrowse_Types->toArray() : [],
-            $container
-        );
+        // AK: Add site config
+        $siteConfig = $container->get(\VuFind\Config\PluginManager::class)
+            ->get('config')->Site;
+        
+        return new $requestedName($config, $siteConfig);
     }
 }

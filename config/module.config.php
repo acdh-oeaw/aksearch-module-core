@@ -19,14 +19,32 @@ $config = [
     ],
     'controller_plugins' => [
         'factories' => [
-            'AkSearch\Controller\Plugin\NewItems' => 'AkSearch\Controller\Plugin\Factory::getNewItems'
+            'AkSearch\Controller\Plugin\NewItems' => 'AkSearch\Controller\Plugin\NewItemsFactory'
         ],
         'aliases' => [
             'newItems' => 'AkSearch\Controller\Plugin\NewItems'
         ],
     ],
+    'service_manager' => [
+        'factories' => [
+            'AkSearch\Auth\Manager' => 'VuFind\Auth\ManagerFactory',
+            'AkSearch\Mailer\Mailer' => 'VuFind\Mailer\Factory'
+        ],
+        'aliases' => [
+            'VuFind\Auth\Manager' => 'AkSearch\Auth\Manager',
+            'VuFind\Mailer' => 'AkSearch\Mailer\Mailer'
+        ],
+    ],
     'vufind' => [
         'plugin_managers' => [
+            'auth' => [
+                'factories' => [
+                    'AkSearch\Auth\AlmaDatabase' => 'VuFind\Auth\ILSFactory'
+                ],
+                'aliases' => [
+                    'almadatabase' => 'AkSearch\Auth\AlmaDatabase'
+                ]
+            ],
             'db_row' => [
                 'factories' => [
                     'AkSearch\Db\Row\Loans' => 'VuFind\Db\Row\RowGatewayFactory'
@@ -78,7 +96,7 @@ $config = [
     'zfc_rbac' => [
         'vufind_permission_provider_manager' => [
             'factories' => [
-                'AkSearch\Role\PermissionProvider\Usergroup' => 'AkSearch\Role\PermissionProvider\Factory::getUsergroup',
+                'AkSearch\Role\PermissionProvider\Usergroup' => 'AkSearch\Role\PermissionProvider\UsergroupFactory',
             ],
             'aliases' => [
                 'usergroup' => 'AkSearch\Role\PermissionProvider\Usergroup',

@@ -143,14 +143,12 @@ class NewItems extends \VuFind\Controller\Plugin\NewItems
      */
     public function getDatepickerConfig() {
         $datePickerConfig = [];
-
         if ($this->useDatePicker) {
-            $datePickerConfig['displayDateFormatJs'] = $this->getDatepickerDateFormat();
+            $datePickerConfig['displayDateFormatPhp'] = $this->getDisplayDateFormat();
             $datePickerConfig['datepickerStartDate'] = $this->getDatepickerStartDate();
             $datePickerConfig['datepickerFromDateFull'] = $this->getDatepickerFromDateFull();
             $datePickerConfig['datepickerMode'] = $this->getDatepickerMode();
         }
-
         return $datePickerConfig;
     }
 
@@ -166,32 +164,6 @@ class NewItems extends \VuFind\Controller\Plugin\NewItems
         return ($this->getDatepickerMode() === 'days')
                   ? $this->displayDateFormat
                   : 'F Y';
-    }
-
-    /**
-     * AK: Translate the PHP notation of the date format to the bootstrap-datepicker
-     *     notation format.
-     *
-     * @return string The date format in bootstrap-datepicker notation
-     */
-    public function getDatepickerDateFormat()
-    {
-        $replacements = [
-            'j' => 'd',
-            'd' => 'dd',
-            'D' => 'D',
-            'l' => 'DD',
-            'n' => 'm',
-            'm' => 'mm',
-            'M' => 'M',
-            'F' => 'MM',
-            'y' => 'yy',
-            'Y' => 'yyyy'
-        ];
-
-        $datepickerFormat = strtr($this->getDisplayDateFormat(), $replacements);
-
-        return $datepickerFormat;
     }
 
     /**

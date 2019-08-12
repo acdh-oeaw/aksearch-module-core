@@ -81,7 +81,7 @@ class SearchController extends \VuFind\Controller\SearchController
         // AK: Get config for a datepicker (or empty array if no datepicker is used)
         $datePickerConfig = $this->newItems()->getDatepickerConfig();
 
-        // AK: Add the facet list to the New Itemsview so that we can use it there
+        // AK: Add the facet list to the New Items view so that we can use it there
         //     (see themes/AkSearch/templates/search/newitem.phtml)
         return $this->createViewModel(
             [

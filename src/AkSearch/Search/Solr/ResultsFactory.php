@@ -38,7 +38,7 @@ use Interop\Container\ContainerInterface;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development Wiki
  */
-class ResultsFactory extends \VuFind\Search\Solr\ResultsFactory /*\VuFind\Search\Results\ResultsFactory*/
+class ResultsFactory extends \VuFind\Search\Solr\ResultsFactory
 {
     /**
      * Create an object
@@ -57,11 +57,13 @@ class ResultsFactory extends \VuFind\Search\Solr\ResultsFactory /*\VuFind\Search
     public function __invoke(ContainerInterface $container, $requestedName,
         array $options = null
     ) {
-        // AK: Create authorization service and pass it to \AkSearch\Search\Solr\FacetCache
-        $authService = $container->get('ZfcRbac\Service\AuthorizationService');
+        // AK: Create authorization service and pass it to
+        //     \AkSearch\Search\Solr\FacetCache
+        $authService = $container->get(\ZfcRbac\Service\AuthorizationService::class);
+        
 
         // AK: Get facets.ini configs and pass it to \AkSearch\Search\Solr\FacetCache
-        $configLoader = $container->get('VuFind\Config\PluginManager');
+        $configLoader = $container->get(\VuFind\Config\PluginManager::class);
         $facetConfigs = $configLoader->get('facets')->toArray();
 
         // AK: Create the options array

@@ -78,8 +78,12 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
     ) {
         parent::__construct($optionsManager, $config, $placeholders, $alphabrowseConfig);
 
-        // AK: Creating authorization service for checking permissions from permissions.ini
-        $this->authService = $container->get('ZfcRbac\Service\AuthorizationService');
+        // AK: Creating authorization service for checking permissions from
+        //     permissions.ini
+        //     TODO: Get only \ZfcRbac\Service\AuthorizationService passed from
+        //           SearchBoxFactory instead of whole container object!
+        $this->authService = $container
+            ->get(\ZfcRbac\Service\AuthorizationService::class);
         if (!$this->authService) {
             throw new \Exception('Authorization service missing');
         }
@@ -155,11 +159,24 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
 
                     // AK: Check permissions
                     if ($this->getPermission($this->authService, $this->permissionsConfig, $searchVal)) {
+                        
+                        // Depending on whether or not the current section has a label,
+                        // we'll either want to override the first label and indent
+                        // subsequent ones, or else use all default labels without
+                        // any indentation.
+                        if (empty($label)) {
+                            $finalLabel = $searchDesc;
+                            $indent = false;
+                        } else {
+                            $finalLabel = $j == 1 ? $label : $searchDesc;
+                            $indent = $j == 1 ? false : true;
+                        }
                         $handlers[] = [
                             'value' => $type . ':' . $target . '|' . $searchVal,
-                            'label' => $j == 1 ? $label : $searchDesc,
-                            'indent' => $j == 1 ? false : true,
-                            'selected' => $selected
+                            'label' => $finalLabel,
+                            'indent' => $indent,
+                            'selected' => $selected,
+                            'group' => $settings['group'][$i],
                         ];
                     }
                 }
@@ -169,7 +186,8 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
                     $addedBrowseHandlers = true;
                     $handlers = array_merge(
                         $handlers,
-                        $this->getAlphaBrowseHandlers($activeHandler)
+                        // Only indent alphabrowse handlers if label is non-empty:
+                        $this->getAlphaBrowseHandlers($activeHandler, !empty($label))
                     );
                 }
             } elseif ($type == 'External') {
@@ -177,7 +195,8 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
                 if ($this->getPermission($this->authService, $this->permissionsConfig, $target)) {
                     $handlers[] = [
                         'value' => $type . ':' . $target, 'label' => $label,
-                        'indent' => false, 'selected' => false
+                        'indent' => false, 'selected' => false,
+                        'group' => $settings['group'][$i],
                     ];
                 }
             }
@@ -187,8 +206,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
         // but we are configured to include them, we should add them now:
         if (!$addedBrowseHandlers && $this->alphaBrowseOptionsEnabled()) {
             $handlers = array_merge(
-                $handlers,
-                $this->getAlphaBrowseHandlers($activeHandler, false)
+                $handlers, $this->getAlphaBrowseHandlers($activeHandler, false)
             );
         }
 
@@ -197,50 +215,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
         if (!$selectedFound && $backupSelectedIndex !== false) {
             $handlers[$backupSelectedIndex]['selected'] = true;
         }
-
         return $handlers;
     }
 
-
-
-
-    
-
-    /**
-     * Support method for getCombinedHandlers() -- retrieve/validate configuration.
-     *
-     * @param string $activeSearchClass Active search class ID
-     *
-     * @return array
-     */
-    protected function getCombinedHandlerConfig($activeSearchClass)
-    {
-        if (!isset($this->cachedConfigs[$activeSearchClass])) {
-            // Load and validate configuration:
-            $settings = isset($this->config['CombinedHandlers'])
-                ? $this->config['CombinedHandlers'] : [];
-            if (empty($settings)) {
-                throw new \Exception('CombinedHandlers configuration missing.');
-            }
-
-            $typeCount = count($settings['type']);
-            if ($typeCount != count($settings['target'])
-                || $typeCount != count($settings['label'])
-            ) {
-                throw new \Exception('CombinedHandlers configuration incomplete.');
-            }
-
-            // Add configuration for the current search class if it is not already
-            // present:
-            if (!in_array($activeSearchClass, $settings['target'])) {
-                $settings['type'][] = 'VuFind';
-                $settings['target'][] = $activeSearchClass;
-                $settings['label'][] = $activeSearchClass;
-            }
-            
-            $this->cachedConfigs[$activeSearchClass] = $settings;
-        }
-
-        return $this->cachedConfigs[$activeSearchClass];
-    }
 }
