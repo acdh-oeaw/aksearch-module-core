@@ -254,6 +254,70 @@ class AlmaController extends \VuFind\Controller\AlmaController
         }
     }
 
+
+    /**
+     * Send the "set password email" to a new user that was created in Alma and sent
+     * to VuFind via webhook.
+     * 
+     * AK: Send HTML (mime) e-mail instead of "just text" e-mail
+     *
+     * @param \VuFind\Db\Row\User $user   A user row object from the VuFind
+     *                                    user table.
+     * @param \Zend\Config\Config $config A config object of config.ini
+     *
+     * @return void
+     */
+    protected function sendSetPasswordEmail($user, $config)
+    {
+        // If we can't find a user
+        if (null == $user) {
+            error_log(
+                'Could not send the email to new user for setting the ' .
+                'password because the user object was not found.'
+            );
+        } else {
+            // Attempt to send the email
+            try {
+                // Create a fresh hash
+                $user->updateHash();
+                $config = $this->getConfig();
+                $renderer = $this->getViewRenderer();
+                $method = $this->getAuthManager()->getAuthMethod();
+
+                // AK: Get template for welcome e-mail when user is created via
+                //     Alma webhook.
+                $message = $renderer->render(
+                    'Email/new-user-welcome-almawebhook.phtml', [
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'username' => $user->username,
+                    'url' => $this->getServerUrl('myresearch-verify') . '?hash=' .
+                        $user->verify_hash . '&auth_method=' . $method
+                    ]
+                );
+                
+                // AK: Get configs from Alma.ini
+                $almaConfig = $this->getConfig('Alma');
+                $bcc = $almaConfig->Webhook->new_user_welcome_email_bcc;
+                $from = $almaConfig->Webhook->new_user_welcome_email_from
+                        ?? $config->Site->email ?: $config->Site->email;
+                $replyTo = $almaConfig->Webhook->new_user_welcome_email_replyto;
+                
+                // AK: Send the mime e-mail
+                $this->serviceLocator->get(\AkSearch\Mailer\Mailer::class)
+                    ->sendMimeMail($user->email, $from,
+                    $this->translate('new_user_welcome_almawebhook_subject'),
+                    $message, $replyTo, null, $bcc, null);
+            } catch (\VuFind\Exception\Mail $e) {
+                error_log(
+                    'Could not send the \'set-password-email\' to user with ' .
+                    'primary ID \'' . $user->cat_id . '\' | username \'' .
+                    $user->username . '\': ' . $e->getMessage()
+                );
+            }
+        }
+    }
+
     /**
      * Convenience method for creating an error response
      *
