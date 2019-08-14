@@ -130,6 +130,17 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         return $user;
     }
 
+    /**
+     * AK: Change userdata in Alma
+     *
+     * @param array              $patron  Patron information
+     * @param \Zend\Http\Request $request Request object containing form data
+     * 
+     * @return void
+     */
+    public function changeUserdata($patron, $request) {
+        return $this->almaDriver->changeUserdata($patron, $request);
+    }
 
     /**
      * AK: Get a unique barcode/username. If the generated barcode/username exists
@@ -297,6 +308,15 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
      * @return bool
      */
     public function supportsLibraryEmail() {
+        return true;
+    }
+
+    /**
+     * AK: Indicates if changing userdata is supported or not
+     *
+     * @return bool
+     */
+    public function supportsUserdataChange() {
         return true;
     }
 

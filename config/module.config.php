@@ -106,7 +106,7 @@ $config = [
 ];
 
 $staticRoutes = [
-    'Install/FixLoanHistoryTable'
+    'Install/FixLoanHistoryTable', 'MyResearch/ChangeUserdata'
 ];
 
 $routeGenerator = new \VuFind\Route\RouteGenerator();

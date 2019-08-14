@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AK: Extends Alma ILS Driver
  *
@@ -40,9 +41,10 @@ use SimpleXMLElement;
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
 class Alma
-            extends \VuFind\ILS\Driver\Alma
-            implements \VuFind\Db\Table\DbTableAwareInterface,
-                       \VuFind\I18n\Translator\TranslatorAwareInterface
+extends \VuFind\ILS\Driver\Alma
+implements
+    \VuFind\Db\Table\DbTableAwareInterface,
+    \VuFind\I18n\Translator\TranslatorAwareInterface
 {
     use AlmaTrait;
     use \VuFind\Db\Table\DbTableAwareTrait;
@@ -63,18 +65,19 @@ class Alma
     {
         // Get config for creating new Alma users from Alma.ini
         $newUserConfig = $this->config['NewUser'];
-        
+
         // Check if all necessary configs are set
         $configParams = [
             'recordType', 'userGroup', 'preferredLanguage',
             'accountType', 'status', 'emailType', 'idType'
         ];
         foreach ($configParams as $configParam) {
-            if (!isset($newUserConfig[$configParam])
+            if (
+                !isset($newUserConfig[$configParam])
                 || empty(trim($newUserConfig[$configParam]))
             ) {
                 $errorMessage = 'Configuration "' . $configParam . '" is not set ' .
-                                'in Alma.ini in the [NewUser] section!';
+                    'in Alma.ini in the [NewUser] section!';
                 error_log('[ALMA]: ' . $errorMessage);
                 throw new \VuFind\Exception\Auth($errorMessage);
             }
@@ -107,8 +110,8 @@ class Alma
         $statArr = [];
         foreach ($allParams as $key => $statValue) {
             $keyParts = explode('_', $key);
-            if ($keyParts[count($keyParts)-1] === 'almastat') {
-                $lengthWithoutSuffix = (strlen($key)-strlen('_almastat'));
+            if ($keyParts[count($keyParts) - 1] === 'almastat') {
+                $lengthWithoutSuffix = (strlen($key) - strlen('_almastat'));
                 $statName = substr($key, 0, $lengthWithoutSuffix);
                 if ($statValue != null && !empty($statValue)) {
                     $statArr[$statName] = $statValue;
@@ -120,7 +123,7 @@ class Alma
         // a simple XML object
         $theme = $this->configLoader->get('config')->Site->theme ?? 'root';
         $almaUserObj = simplexml_load_file(
-            "themes/".$theme."/templates/Auth/AlmaDatabase/AlmaUserObject.xml"
+            "themes/" . $theme . "/templates/Auth/AlmaDatabase/AlmaUserObject.xml"
         );
 
         // Set values to the simple XML object
@@ -136,7 +139,7 @@ class Alma
         $almaUserObj->account_type = $newUserConfig['accountType'];
         $almaUserObj->status = $newUserConfig['status'];
         $almaUserObj->contact_info->addresses->address->line1 = $allParams['street'];
-        $almaUserObj->contact_info->addresses->address->line2 = 
+        $almaUserObj->contact_info->addresses->address->line2 =
             $allParams['zip'] . ' ' . $allParams['city'];
         $almaUserObj->contact_info->addresses->address->city =
             $allParams['city'];
@@ -190,19 +193,19 @@ class Alma
 
         // Add user block element if applicable
         if (filter_var(($newUserConfig['blockUser'] ?? false),
-            FILTER_VALIDATE_BOOLEAN)
-        ) {
+            FILTER_VALIDATE_BOOLEAN
+        )) {
             // Create basic user block element
             $almaUserObj->addChild('user_blocks')->addChild('user_block')
                 ->addAttribute('segment_type', 'Internal');
-            
+
             // Add child elements to basic user block element
             $almaUserObj->user_blocks->user_block->addChild('block_type');
             $almaUserObj->user_blocks->user_block->addChild('block_description');
             $almaUserObj->user_blocks->user_block->addChild('block_status');
             $almaUserObj->user_blocks->user_block->addChild('block_note');
             $almaUserObj->user_blocks->user_block->addChild('created_by');
-            
+
             // Add values to user block elements
             $almaUserObj->user_blocks->user_block->block_type =
                 $newUserConfig['blockTypeCode'];
@@ -215,17 +218,23 @@ class Alma
             $almaUserObj->user_blocks->user_block->created_by =
                 $newUserConfig['blockCreatedBy'];
         }
-        
+
         // Convert simple XML element to string
         $almaUserObjStr = $almaUserObj->asXML();
 
         // Remove whitespaces from XML string
         $almaUserObjStr = preg_replace("/\n/", "", $almaUserObjStr);
         $almaUserObjStr = preg_replace("/>\s*</", "><", $almaUserObjStr);
-        
+
         // Create user in Alma via API by POSTing the user XML
-        $almaAnswer = $this->makeRequest('/users', [], [], 'POST', $almaUserObjStr,
-            ['Content-Type' => 'application/xml']);
+        $almaAnswer = $this->makeRequest(
+            '/users',
+            [],
+            [],
+            'POST',
+            $almaUserObjStr,
+            ['Content-Type' => 'application/xml']
+        );
 
         // Return the XML anser from Alma on success. On error, an exception is
         // thrown in makeRequest.
@@ -257,63 +266,253 @@ class Alma
             return [];
         }
         $profile = [
-            'firstname'  => (isset($xml->first_name))
-                                ? (string)$xml->first_name
-                                : null,
-            'lastname'   => (isset($xml->last_name))
-                                ? (string)$xml->last_name
-                                : null,
-            'group'      => (isset($xml->user_group['desc']))
-                                ? (string)$xml->user_group['desc']
-                                : null,
-            'group_code' => (isset($xml->user_group))
-                                ? (string)$xml->user_group
-                                : null
+            'firstname'         => (isset($xml->first_name))
+                ? (string) $xml->first_name
+                : null,
+            'lastname'          => (isset($xml->last_name))
+                ? (string) $xml->last_name
+                : null,
+            'group'             => (isset($xml->user_group['desc']))
+                ? (string) $xml->user_group['desc']
+                : null,
+            'group_code'        => (isset($xml->user_group))
+                ? (string) $xml->user_group
+                : null,
+            'expiration_date'   => (isset($xml->expiry_date))
+                ? $this->parseDate((string) $xml->expiry_date)
+                : null,
         ];
         $contact = $xml->contact_info;
         if ($contact) {
             if ($contact->addresses) {
-                $address = $contact->addresses[0]->address;
-                $profile['address1'] =  (isset($address->line1))
-                                            ? (string)$address->line1
-                                            : null;
-                $profile['address2'] =  (isset($address->line2))
-                                            ? (string)$address->line2
-                                            : null;
-                $profile['address3'] =  (isset($address->line3))
-                                            ? (string)$address->line3
-                                            : null;
-                $profile['zip']      =  (isset($address->postal_code))
-                                            ? (string)$address->postal_code
-                                            : null;
-                $profile['city']     =  (isset($address->city))
-                                            ? (string)$address->city
-                                            : null;
-                $profile['country']  =  (isset($address->country))
-                                            ? (string)$address->country
-                                            : null;
+
+                // Get preferred address
+                $prefAddress = $contact->addresses
+                    ->xpath('address[@preferred="true"]');
+
+                // If no preferred address is found, get the first one
+                $address = (!empty($prefAddress))
+                    ? $prefAddress[0]
+                    : $contact->addresses[0]->address;
+
+                // Set address details to return array
+                $profile['address1'] = (isset($address->line1))
+                    ? (string) $address->line1
+                    : null;
+                $profile['address2'] = (isset($address->line2))
+                    ? (string) $address->line2
+                    : null;
+                $profile['address3'] = (isset($address->line3))
+                    ? (string) $address->line3
+                    : null;
+                $profile['address4'] = (isset($address->line4))
+                    ? (string) $address->line4
+                    : null;
+                $profile['address5'] = (isset($address->line5))
+                    ? (string) $address->line5
+                    : null;
+                $profile['zip']      = (isset($address->postal_code))
+                    ? (string) $address->postal_code
+                    : null;
+                $profile['city']     = (isset($address->city))
+                    ? (string) $address->city
+                    : null;
+                $profile['country']  = (isset($address->country))
+                    ? (string) $address->country
+                    : null;
             }
-            if ($contact->phones) {
-                $profile['phone'] = (isset($contact->phones[0]->phone->phone_number))
-                                   ? (string)$contact->phones[0]->phone->phone_number
-                                   : null;
-            }
+
+            // Get e-mail object from Alma API user object
+            $emailObj = $this->getEmailFromAlmaXmlUserObject($xml);
+
+            // Set e-mail address to return array
+            $profile['email'] = (isset($emailObj->email_address))
+                ? (string) $emailObj->email_address
+                : null;
+                
+            // Get non-mobile phone object from Alma API user object
+            $phoneObj = $this->getPhoneFromAlmaXmlUserObject($xml);
+
+            // Get non-mobile phone number as string
+            $phoneNo = (isset($phoneObj->phone_number))
+                ? (string) $phoneObj->phone_number
+                : null;
+
+            // Set non-mobile phone number to return array
+            $profile['phone'] = $phoneNo;
+
+            // Get mobile phone object from Alma API user object
+            $mobilePhoneObj = $this->getMobilePhoneFromAlmaXmlUserObject($xml);
+
+            // Get the mobile phone number (if any exists)
+            $mobileNo = (isset($mobilePhoneObj->phone_number))
+                ? (string) $mobilePhoneObj->phone_number
+                : null;
+
+            // If mobile phone and non-mobile phone are the same, set to null so
+            // that we don't have duplicate phone numbers in the view
+            $mobileNo = ($mobileNo == $phoneNo) ? null : $mobileNo;
+
+            // Set mobile phone number to return array
+            $profile['mobile_phone'] = $mobileNo;
         }
 
         // Set usergroup details to cache
         if (isset($this->cache)) {
             $patronIdKey = $this->getCleanCacheKey($patronId);
             $this->cache->setItem(
-                'Alma_User_'.$patronIdKey.'_GroupCode',
+                'Alma_User_' . $patronIdKey . '_GroupCode',
                 $profile['group_code'] ?? null
             );
             $this->cache->setItem(
-                'Alma_User_'.$patronIdKey.'_GroupDesc',
+                'Alma_User_' . $patronIdKey . '_GroupDesc',
                 $profile['group'] ?? null
             );
         }
 
-        return $profile;
+        return array_filter($profile);
+    }
+
+    /**
+     * AK: Change userdata in Alma
+     *
+     * @param array              $patron  Patron information
+     * @param \Zend\Http\Request $request Request object containing form data
+     * 
+     * @return void
+     */
+    public function changeUserdata($patron, $request)
+    {
+        // Get values passed to this method
+        $patronId = $patron['cat_username'];
+        $phone = $request->getPost('phone');
+        $mobilePhone = $request->getPost('mobile_phone');
+        $email = $request->getPost('email');
+
+        // Get user object from Alma via API
+        $xml = $this->makeRequest('/users/' . $patronId, ['view' => 'full']);
+
+        // Get e-mail object and set the address to the given user input
+        $emailObj = $this->getEmailFromAlmaXmlUserObject($xml);
+        if ($emailObj != null) {
+            $emailObj->email_address = $email;
+        }
+
+        // Get non-mobile phone object and set the address to the given user input
+        $phoneObj = $this->getPhoneFromAlmaXmlUserObject($xml);
+        if ($phoneObj != null) {
+            $phoneObj->phone_number = $phone;
+        }
+
+        // Get mobile phone object and set the address to the given user input
+        $mobilePhoneObj = $this->getMobilePhoneFromAlmaXmlUserObject($xml);
+        if ($mobilePhoneObj != null) {
+            $mobilePhoneObj->phone_number = $mobilePhone;
+        }
+
+        // Convert simple XML element to string
+        $almaUserObjStr = $xml->asXML();
+
+        // Remove whitespaces from XML string
+        $almaUserObjStr = preg_replace("/\n/", "", $almaUserObjStr);
+        $almaUserObjStr = preg_replace("/>\s*</", "><", $almaUserObjStr);
+
+        // Update the user in Alma via API
+        $this->makeRequest(
+            '/users/' . $patronId,
+            [],
+            [],
+            'PUT',
+            $almaUserObjStr,
+            ['Content-Type' => 'application/xml']
+        );
+    }
+
+    /**
+     * AK: Get the preferred or first e-mail object from an Alma user object obtained
+     * by an API call.
+     *
+     * @param SimpleXMLElement $almaXmlUserObject User object from Alma user API
+     * 
+     * @return null|SimpleXMLElement The (preferred) e-mail object
+     */
+    private function getEmailFromAlmaXmlUserObject($almaXmlUserObject)
+    {
+        $email = null;
+        if ($contact = $almaXmlUserObject->contact_info) {
+            if ($contact->emails) {
+                // Get preferred e-mail
+                $prefEmail = $contact->emails
+                    ->xpath(
+                        'email[@preferred="true"]'
+                    );
+
+                // If no preferred e-mail is found, get the first one
+                $email = (!empty($prefEmail))
+                    ? $prefEmail[0]
+                    : $contact->emails[0]->email;
+            }
+        }
+
+        return $email;
+    }
+
+    /**
+     * AK: Get the preferred or first non-mobile phone object from an Alma user
+     * object obtained by an API call.
+     *
+     * @param SimpleXMLElement $almaXmlUserObject User object from Alma user API
+     * 
+     * @return null|SimpleXMLElement The (preferred) non-mobile phone object
+     */
+    private function getPhoneFromAlmaXmlUserObject($almaXmlUserObject)
+    {
+        $phone = null;
+        if ($contact = $almaXmlUserObject->contact_info) {
+            if ($contact->phones) {
+                // Get preferred default phone (not mobile only)
+                $prefPhone = $contact->phones
+                    ->xpath(
+                        'phone[@preferred="true"][phone_types/phone_type!="mobile"]'
+                    );
+
+                // If no preferred default phone is found, get the first one
+                $phone = (!empty($prefPhone))
+                    ? $prefPhone[0]
+                    : $contact->phones[0]->phone;
+            }
+        }
+        return $phone;
+    }
+
+    /**
+     * AK: Get the preferred or first mobile phone object from an Alma user object
+     * obtained by an API call.
+     *
+     * @param SimpleXMLElement $almaXmlUserObject User object from Alma user API
+     * 
+     * @return null|SimpleXMLElement The (preferred) mobile phone object
+     */
+    private function getMobilePhoneFromAlmaXmlUserObject($almaXmlUserObject)
+    {
+        $mobile = null;
+        if ($contact = $almaXmlUserObject->contact_info) {
+            if ($contact->phones) {
+                // Get preferred mobile phone
+                $prefMobile = $contact->phones
+                    ->xpath(
+                        'phone[@preferred="true"][phone_types/phone_type="mobile"]'
+                    );
+
+                // If no preffered mobile phone is set, get all other mobile phones
+                $mobile = (!empty($prefMobile)) ? $prefMobile : $contact->phones
+                    ->xpath('phone[phone_types/phone_type="mobile"]');
+
+                // Select the first mobile phone of all mobile phones (if any exists)
+                $mobile = (!empty($mobile)) ? $mobile[0] : null;
+            }
+        }
+        return $mobile;
     }
 
     /**
@@ -324,7 +523,8 @@ class Alma
      *                      (keys ='limit', 'page', 'sort')
      * @return array An array with data about the loans of the user
      */
-    public function getMyTransactionHistory($patron, $params = null) {
+    public function getMyTransactionHistory($patron, $params = null)
+    {
         // Get the MySQL user table
         $userTable = $this->getDbTable('user');
 
@@ -353,15 +553,15 @@ class Alma
                 $sort = ['loan_date' => 'desc'];
                 break;
         }
-        
+
         // Get limit config
         $limit = (empty($params['limit']))
             ? 20
-            : (int)$params['limit'];
+            : (int) $params['limit'];
 
         // Calculate offset for paging in SQL query
-        $offset = (empty($params['page'])) ? 0 : ((int)$params['page'] - 1) * $limit;
-        
+        $offset = (empty($params['page'])) ? 0 : ((int) $params['page'] - 1) * $limit;
+
         // Get the MySQL loans table
         $loansTable = $this->getDbTable('loans');
 
@@ -387,24 +587,24 @@ class Alma
                 . $e->getMessage());
             throw new \VuFind\Exception\ILS($errorMessage);
         }
-        
+
         // Map array from MySQL result to an array formatted as documented
         // for this function on VuFind Wiki.
-        $userLoansMapped = array_map(function($userLoan) {
+        $userLoansMapped = array_map(function ($userLoan) {
             return array(
-              'title' =>  $userLoan['title'] ?? null,
-              'checkoutDate' => $userLoan['loan_date'] ?? null,
-              'dueDate' => $userLoan['due_date'] ?? null,
-              'id' => $userLoan['bib_id'] ?? null,
-              'barcode' => $userLoan['barcode'] ?? null,
-              'returnDate' => $userLoan['return_date'] ?? null,
-              'publication_year' => $userLoan['publication_year'] ?? null,
-              'volume' => $userLoan['description'] ?? null,
-              'institution_name' => $userLoan['library_code'] ?? null,
-              'borrowingLocation' => $userLoan['location_code'] ?? null
+                'title' =>  $userLoan['title'] ?? null,
+                'checkoutDate' => $userLoan['loan_date'] ?? null,
+                'dueDate' => $userLoan['due_date'] ?? null,
+                'id' => $userLoan['bib_id'] ?? null,
+                'barcode' => $userLoan['barcode'] ?? null,
+                'returnDate' => $userLoan['return_date'] ?? null,
+                'publication_year' => $userLoan['publication_year'] ?? null,
+                'volume' => $userLoan['description'] ?? null,
+                'institution_name' => $userLoan['library_code'] ?? null,
+                'borrowingLocation' => $userLoan['location_code'] ?? null
             );
         }, $userLoans['transactions']);
-        
+
         // Create return array
         $returnArr['count'] = $userLoans['count'];
         $returnArr['transactions'] = $userLoansMapped;
@@ -424,7 +624,8 @@ class Alma
      * 
      * @return void
      */
-    public function saveMyTransactionHistory($patron, $save) {
+    public function saveMyTransactionHistory($patron, $save)
+    {
         // Get the MySQL user table
         $userTable = $this->getDbTable('user');
 
@@ -459,7 +660,8 @@ class Alma
      * 
      * @return void
      */
-    public function deleteMyTransactionHistory($patron) {
+    public function deleteMyTransactionHistory($patron)
+    {
         // Get catalog username from patron array
         $username = $patron['cat_username'] ?? null;
 
@@ -495,7 +697,8 @@ class Alma
      * @param array $patron Patron array returned by patronLogin method
      * @return void
      */
-    public function exportMyTransactionHistory($patron) {
+    public function exportMyTransactionHistory($patron)
+    {
         // Get catalog username from patron array
         $username = $patron['cat_username'] ?? null;
 
@@ -516,25 +719,26 @@ class Alma
                 // Select users loans by internal VuFind user id
                 $loans = $loansTable->selectUserLoans($userId);
 
-				// Try to get the users operating system
-				$ua = $_SERVER['HTTP_USER_AGENT']; // Get the user agent
-				$os = 'win'; // Default. Most OS are Windows.
+                // Try to get the users operating system
+                $ua = $_SERVER['HTTP_USER_AGENT']; // Get the user agent
+                $os = 'win'; // Default. Most OS are Windows.
                 $sep = ',';  // Default. In Excel (Win) we have to use semi-colon ;
-				
-                if (stripos($ua, 'linux') !== false
+
+                if (
+                    stripos($ua, 'linux') !== false
                     || stripos($ua, 'CrOS') !== false
                     || stripos($ua, 'BSD') !== false
                     || stripos($ua, 'SunOS') !== false
                     || stripos($ua, 'UNIX') !== false
                 ) {
-					$os = 'linux';
-				} else if (stripos($ua, 'mac') !== false) {
-					$os = 'mac';
-				} else if (stripos($ua, 'windows') !== false) {
-					$os = 'win';
-					$sep = ';';
-				}
-                
+                    $os = 'linux';
+                } else if (stripos($ua, 'mac') !== false) {
+                    $os = 'mac';
+                } else if (stripos($ua, 'windows') !== false) {
+                    $os = 'win';
+                    $sep = ';';
+                }
+
                 // Check if we have to convert the encoding for Windows
                 $convertToWin = true; // Default
                 if ($os !== 'win') {
@@ -558,7 +762,8 @@ class Alma
                 // resulting array. Also, the order given here will be used for the
                 // results. That is important for aligning the columns containing
                 // the CSV headings with the columns containing the CSV contents.
-                $dbColsToUse = ['id', 'ils_loan_id', 'bib_id', 'title', 'author',
+                $dbColsToUse = [
+                    'id', 'ils_loan_id', 'bib_id', 'title', 'author',
                     'publication_year', 'description', 'call_no', 'barcode',
                     'loan_date', 'due_date', 'return_date'
                 ];
@@ -578,8 +783,7 @@ class Alma
                             $value = ($dbValue) ? $dbValue : '';
 
                             // Add (Windows encoded) value to result array
-                            $csvLoanHistories[$key][$dbCol] = 
-                                ($convertToWin)
+                            $csvLoanHistories[$key][$dbCol] = ($convertToWin)
                                 ? $this->getWinEncodedText($value)
                                 : $value;
                         }
@@ -590,16 +794,16 @@ class Alma
                 array_unshift($csvLoanHistories, $csvHeadings);
 
                 // Create CSV file and add loan history details
-				$filename = 'ak_loan_history_' . date('d.m.Y') . '.csv';
-				header('Content-Disposition: attachment; filename="'.$filename.'"');
-				header('Content-Type: text/csv; charset=UTF-16');
+                $filename = 'ak_loan_history_' . date('d.m.Y') . '.csv';
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Content-Type: text/csv; charset=UTF-16');
                 $output = fopen('php://output', 'w');
                 //$bom = "\xEF\xBB\xBF"; // UTF-8 BOM
-				//fwrite($output, $bom);
-				//fwrite($output, 'sep=,');
-				foreach ($csvLoanHistories as $csvLoanHistory) {
-					fputcsv($output, array_values($csvLoanHistory), $sep, '"');
-				}
+                //fwrite($output, $bom);
+                //fwrite($output, 'sep=,');
+                foreach ($csvLoanHistories as $csvLoanHistory) {
+                    fputcsv($output, array_values($csvLoanHistory), $sep, '"');
+                }
                 fclose($output);
             } catch (\Exception $e) {
                 throw new \VuFind\Exception\ILS('Error while exporting loans for ' .
@@ -619,7 +823,8 @@ class Alma
      * @param  boolean   $convert     Convert to Windows encoding (UTF-16LE) if true
      * @return array                  Acssociative array of translated headings
      */
-    protected function getCsvTranslation($translate, $convertToWin) {
+    protected function getCsvTranslation($translate, $convertToWin)
+    {
 
         $csvHeadings = [];
 
@@ -644,7 +849,8 @@ class Alma
      * @param string  $text The text to encode from UTF-8 to UTF-16LE
      * @return string       The UTF-16LE encoded text
      */
-    protected function getWinEncodedText($text) {
+    protected function getWinEncodedText($text)
+    {
         return mb_convert_encoding($text, 'UTF-16LE', 'UTF-8');
     }
 
@@ -680,7 +886,7 @@ class Alma
 
                 // Get info about currently logged in user from the user table
                 $user = $userTable->getByUsername($username, false);
-                
+
                 try {
                     $saveLoans = filter_var(
                         $user->save_loans,
@@ -783,7 +989,8 @@ class Alma
         // Initialize return variable
         $purgeDate = null;
 
-        if (isset($newUserConfig['purgeDate'])
+        if (
+            isset($newUserConfig['purgeDate'])
             && !empty(trim($newUserConfig['purgeDate']))
         ) {
             try {
@@ -793,7 +1000,7 @@ class Alma
                 );
             } catch (\Exception $exception) {
                 $errorMessage = 'Configuration "purgeDate" in Alma.ini (see ' .
-                                '[NewUser] section) has the wrong format!';
+                    '[NewUser] section) has the wrong format!';
                 error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
                     . $exception->getMessage());
                 throw new \VuFind\Exception\Auth($errorMessage);
@@ -802,5 +1009,4 @@ class Alma
 
         return $purgeDate;
     }
-
 }
