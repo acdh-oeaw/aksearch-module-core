@@ -249,7 +249,7 @@ implements
      *
      * This is responsible for retrieving the profile for a specific patron.
      * 
-     * AK: Setting the usergroup and usergroup code to the cache without using
+     * AK: Setting some user information to the object cache without using the
      *     cache-key-generator from \VuFind\ILS\Driver\CacheTrait as this adds
      *     the class name to the cache-key which makes it hard to use the cached
      *     data from other classes.
@@ -367,6 +367,10 @@ implements
             $this->cache->setItem(
                 'Alma_User_' . $patronIdKey . '_GroupDesc',
                 $profile['group'] ?? null
+            );
+            $this->cache->setItem(
+                'Alma_User_' . $patronIdKey . '_ExpiryDate',
+                $profile['expiration_date'] ?? null
             );
         }
 
