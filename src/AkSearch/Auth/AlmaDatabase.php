@@ -130,6 +130,63 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         return $user;
     }
 
+    /**
+     * Attempt to authenticate the current user.  Throws exception if login fails.
+     * AK: Check if user exists in VuFind database AND in Alma
+     *
+     * @param Request $request Request object containing account credentials.
+     *
+     * @throws AuthException
+     * @return \VuFind\Db\Row\User Object representing logged-in user.
+     */
+    public function authenticate($request)
+    {
+        // Make sure the credentials are non-blank:
+        $this->username = trim($request->getPost()->get('username'));
+        $this->password = trim($request->getPost()->get('password'));
+        if ($this->username == '' || $this->password == '') {
+            throw new AuthException('authentication_error_blank');
+        }
+
+        // Validate the credentials:
+        $user = $this->getUserTable()->getByUsername($this->username, false);
+        if (!is_object($user) || !$this->checkPassword($this->password, $user)) {
+            throw new AuthException('authentication_error_invalid');
+        }
+
+        // Verify email address:
+        $this->checkEmailVerified($user);
+
+
+        // AK: Check if the user exists in Alma by calling the getMyProfile function
+        //     of the Alma ILS driver.
+        try {
+            $xml = $this->almaDriver->getMyProfile($user);
+        } catch (\Exception $e) {
+            throw new AuthException('authentication_error_alma_problem');
+        }
+
+        // AK: If we get an invalid answer from the API it means that the user does
+        //     not exist in Alma.
+        if ($xml == null || empty($xml)) {
+            throw new AuthException('authentication_error_no_alma_user');
+        }
+
+        // If we got this far, the login was successful:
+        return $user;
+    }
+
+    /**
+     * AK: Change userdata in Alma
+     *
+     * @param array              $patron  Patron information
+     * @param \Zend\Http\Request $request Request object containing form data
+     * 
+     * @return void
+     */
+    public function changeUserdata($patron, $request) {
+        return $this->almaDriver->changeUserdata($patron, $request);
+    }
 
     /**
      * AK: Get a unique barcode/username. If the generated barcode/username exists
@@ -297,6 +354,15 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
      * @return bool
      */
     public function supportsLibraryEmail() {
+        return true;
+    }
+
+    /**
+     * AK: Indicates if changing userdata is supported or not
+     *
+     * @return bool
+     */
+    public function supportsUserdataChange() {
         return true;
     }
 

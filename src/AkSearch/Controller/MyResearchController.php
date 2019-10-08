@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AK: Extended MyResearch Controller
  *
@@ -25,6 +26,7 @@
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
+
 namespace AkSearch\Controller;
 
 use VuFind\Exception\Auth as AuthException;
@@ -115,6 +117,73 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     }
 
     /**
+     * AK: Change userdata action
+     *
+     * @return void
+     */
+    public function changeuserdataAction()
+    {
+        // Check if user is logged in
+        if (!$this->getAuthManager()->isLoggedIn()) {
+            return $this->forceLogin();
+        }
+
+        // If authentication mechanism does not support change of user data, send
+        // the user back to the profile page!
+        $this->setUpAuthenticationFromRequest();
+        if (!$this->getAuthManager()->supportsUserdataChange()) {
+            $this->flashMessenger()->addMessage('change_userdata_disabled', 'error');
+            return $this->redirect()->toRoute('myresearch-profile');
+        }
+
+        // Create view
+        $view = $this->createViewModel();
+
+        // Get patron
+        $patron = $this->catalogLogin();
+
+        if (is_array($patron)) {
+            // Get the request object
+            $request = $this->getRequest();
+
+            // Pass name of authentication method to view
+            $view->auth_method = $this->getAuthManager()->getAuthMethod();
+
+            // Use recaptacha when set in config
+            $view->useRecaptcha = $this->recaptcha()->active('changeUserdata');
+
+            // If form was submitted
+            if ($this->formWasSubmitted('submit', $view->useRecaptcha)) {
+
+                // Change userdata for the particular auth method
+                $this->getAuthManager()->changeUserdata($patron, $request);
+
+                // If we get this far show a success message
+                $this->flashMessenger()->addMessage(
+                    'change_userdata_success',
+                    'success'
+                );
+            }
+
+            // Obtain user information from ILS. Do this after form submission so
+            // that we get the updated values. These can be displayed to the user
+            // together with a success message for the confirmation of successful
+            // userdata change.
+            $profile = $this->getILS()->getMyProfile($patron);
+
+            // Get userdata from the profile which in turn gets it from the ILS.
+            $userdata = [];
+            $userdata['phone'] = $profile['phone'] ?? null;
+            $userdata['mobile_phone'] = $profile['mobile_phone'] ?? null;
+            $userdata['email'] = $profile['email'] ?? null;
+
+            // Pass the userdata to the view
+            $view->userdata = $userdata;
+        }
+        return $view;
+    }
+
+    /**
      * AK: Send e-mail to library if account was created successfully for a patron.
      * 
      * @param \Zend\Http\Request  $request Request object from the form
@@ -124,7 +193,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
      * 
      * @return void
      */
-    protected function sendEmailToLibrary($request, $user) {
+    protected function sendEmailToLibrary($request, $user)
+    {
         // Check attachments (errors, mime type and size)
         $atts = $this->checkAttachments($request->getFiles());
 
@@ -152,7 +222,12 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             $config->Authentication->welcome_email_from
                 ?? $config->Site->email
                 ?? null,
-            $subject, $body, null, null, null, $atts
+            $subject,
+            $body,
+            null,
+            null,
+            null,
+            $atts
         );
     }
 
@@ -166,7 +241,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
      * 
      * @return void
      */
-    protected function sendWelcomeEmail($request, $user) {
+    protected function sendWelcomeEmail($request, $user)
+    {
         // Get view renderer
         $renderer = $this->getViewRenderer();
 
@@ -191,7 +267,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             $config->Authentication->welcome_email_from
                 ?? $siteMail
                 ?? null,
-            $subject, $body,
+            $subject,
+            $body,
             $config->Authentication->welcome_email_replyto
                 ?? $siteMail
                 ?? null,
@@ -212,7 +289,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
      * 
      * @return \Zend\Stdlib\Parameters Valid attachments
      */
-    protected function checkAttachments($attachments) {
+    protected function checkAttachments($attachments)
+    {
         // Create new parameters object for attachements without errors. Erroneous
         // attachments are mainly from empty file pickers in the form where no file
         // was chosen.
@@ -224,11 +302,14 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
                 $atts->append($attachment);
             }
         }
-        
+
         // Get allowed mime types from config
         $allowedMimeTypesConf =
             $this->almaConfig['NewUser']['fileAttachmentMimeTypes'] ?? '';
-        $allowedMimeTypes = preg_split('/\s*,\s*/', $allowedMimeTypesConf, null,
+        $allowedMimeTypes = preg_split(
+            '/\s*,\s*/',
+            $allowedMimeTypesConf,
+            null,
             PREG_SPLIT_NO_EMPTY
         );
 
@@ -326,7 +407,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
 
         // Check function config (AK: Gets the configs from getConfig in ILS driver)
         $functionConfig = $catalog->checkFunction(
-            'getMyTransactionHistory', $patron
+            'getMyTransactionHistory',
+            $patron
         );
 
         // AK: Check if the driver is able to save the users decision about opting
@@ -343,7 +425,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
 
         // AK: Export loan history
         if ($this->formWasSubmitted('submitExportLoanHistory')) {
-            
+
             // AK: Create the downloadable CSV file response
             $catalog->exportMyTransactionHistory($patron);
 
@@ -355,7 +437,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         // Get paging setup:
         $config = $this->getConfig();
         $pageOptions = $this->getPaginationHelper()->getOptions(
-            (int)$this->params()->fromQuery('page', 1),
+            (int) $this->params()->fromQuery('page', 1),
             $this->params()->fromQuery('sort'),
             $config->Catalog->historic_loan_page_size ?? 50,
             $functionConfig
@@ -371,7 +453,9 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         }
 
         $paginator = $this->getPaginationHelper()->getPaginator(
-            $pageOptions, $result['count'], $result['transactions']
+            $pageOptions,
+            $result['count'],
+            $result['transactions']
         );
         if ($paginator) {
             $pageStart = $paginator->getAbsoluteItemNumber(1) - 1;
@@ -397,8 +481,12 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         // AK: Create the view model
         $view = $this->createViewModel(
             compact(
-                'transactions', 'paginator', 'params',
-                'hiddenTransactions', 'sortList', 'functionConfig'
+                'transactions',
+                'paginator',
+                'params',
+                'hiddenTransactions',
+                'sortList',
+                'functionConfig'
             )
         );
 
@@ -443,6 +531,4 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             return $this->createViewModel();
         }
     }
-
-
 }

@@ -38,6 +38,34 @@ namespace AkSearch\Auth;
  */
 class Manager extends \VuFind\Auth\Manager
 {
+    /**
+     * AK: Change userdata
+     *
+     * @param array              $patron  Patron information
+     * @param \Zend\Http\Request $request Request object containing form data
+     * 
+     * @return void
+     */
+    public function changeUserdata($patron, $request) {
+        return $this->getAuth()->changeUserdata($patron, $request);
+    }
+
+    /**
+     * AK: Is changing userdata supported and allowed?
+     *
+     * @param string $authMethod optional; check this auth method rather than
+     *  the one in config file
+     *
+     * @return bool
+     */
+    public function supportsUserdataChange($authMethod = null) {
+        if (isset($this->config->Authentication->change_userdata)
+            && $this->config->Authentication->change_userdata
+        ) {
+            return $this->getAuth($authMethod)->supportsUserdataChange();
+        }
+        return false;
+    }
 
     /**
      * AK: Is sending a welcome e-mail to a user upon creating a new account
