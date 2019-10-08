@@ -69,6 +69,19 @@ $config = [
                     'VuFind\ILS\Driver\Alma' => 'AkSearch\ILS\Driver\Alma'
                 ]
             ],
+            'recorddriver' => [
+                'factories' => [
+                    'AkSearch\RecordDriver\SolrMarc' => 'VuFind\RecordDriver\SolrDefaultFactory'
+                ],
+                'aliases' => [
+                    'VuFind\RecordDriver\SolrMarc' => 'AkSearch\RecordDriver\SolrMarc'
+                ],
+                'delegators' => [
+                    'AkSearch\RecordDriver\SolrMarc' => [
+                        'VuFind\RecordDriver\IlsAwareDelegatorFactory'
+                    ]
+                ]
+            ],
             'search_backend' => [
                 'factories' => [
                     'Solr' => 'AkSearch\Search\Factory\SolrDefaultBackendFactory'
