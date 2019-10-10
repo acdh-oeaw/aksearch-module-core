@@ -51,7 +51,8 @@ class RecordDataFormatterFactory
      */
     public function getDefaultCollectionInfoSpecs()
     {
-        $spec = new RecordDataFormatter\SpecBuilder();
+        $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
+
         $spec->setMultiLine(
             'Authors', 'getDeduplicatedAuthors', $this->getAuthorFunction()
         );
