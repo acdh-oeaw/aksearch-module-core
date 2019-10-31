@@ -48,10 +48,13 @@ trait MarcAdvancedTrait
      *     buildt from 689 fields which is a specific field used by libraries in the
      *     german-speeking world.
      * 
+     * @param bool $extended Has no functionality here. Only exists to be compatible
+     *                       with the function "getAllSubjectHeadings" in
+     *                       \VuFind\RecordDriver\MarcAdvancedTrait
      *
      * @return array
      */
-    public function getAllSubjectHeadings() {
+    public function getAllSubjectHeadings($extended = false) {
         $returnValue = [];
         $subjectFields = $this->getMarcRecord()->getFields('689');
 
