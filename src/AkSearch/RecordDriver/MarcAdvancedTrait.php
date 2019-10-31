@@ -58,17 +58,42 @@ trait MarcAdvancedTrait
         $returnValue = [];
         $subjectFields = $this->getMarcRecord()->getFields('689');
 
+        $ind1 = 0;
         foreach($subjectFields as $subjectField) {
             $ind1 = $subjectField->getIndicator(1);
             $ind2 = $subjectField->getIndicator(2);
 
             if (is_numeric($ind1) && is_numeric($ind2)) {
-                 $subfields = $subjectField->getSubfields('[axvyzbcg]', true);
+                $subfields = $subjectField->getSubfields('[axvyzbcg]', true);
                 $subfieldData = [];
                 foreach($subfields as $subfield) {
                     $subfieldData[] = $subfield->getData();
                 }
                 $returnValue[$ind1][$ind2] = (join(', ', $subfieldData));
+            }
+        }
+
+        $subjectFields982  = $this->getMarcRecord()->getFields('982');
+        $fieldCount = ($ind1 != 0) ? $ind1+1 : 0;
+        foreach($subjectFields982 as $subjectField982) {
+            $ind1 = $subjectField982->getIndicator(1);
+            $ind2 = $subjectField982->getIndicator(2);
+            if (empty(trim($ind1)) && empty(trim($ind2))) {
+                
+                $subfields = $subjectField982->getSubfields('a', false);
+                if (!empty($subfields)) {
+                    $subfieldData = [];
+                    $tokenCount = 0;
+                    foreach($subfields as $subfield) {
+                        $subfieldContent = $subfield->getData();
+                        $tokens = preg_split("/\s+-\s+/", $subfieldContent);
+                        foreach($tokens as $token) {
+                            $returnValue[$fieldCount][$tokenCount] = $token;
+                            $tokenCount++;
+                        }
+                    }
+                    $fieldCount++;
+                }
             }
         }
 
