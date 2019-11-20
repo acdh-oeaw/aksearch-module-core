@@ -74,7 +74,7 @@ trait MarcAdvancedTrait
         }
 
         $subjectFields982  = $this->getMarcRecord()->getFields('982');
-        $fieldCount = ($ind1 != 0) ? $ind1+1 : 0;
+        $fieldCount = $ind1+1;
         foreach($subjectFields982 as $subjectField982) {
             $ind1 = $subjectField982->getIndicator(1);
             $ind2 = $subjectField982->getIndicator(2);
@@ -86,7 +86,7 @@ trait MarcAdvancedTrait
                     $tokenCount = 0;
                     foreach($subfields as $subfield) {
                         $subfieldContent = $subfield->getData();
-                        $tokens = preg_split("/\s+-\s+/", $subfieldContent);
+                        $tokens = preg_split("/\s+[\/-]\s+/", $subfieldContent);
                         foreach($tokens as $token) {
                             $returnValue[$fieldCount][$tokenCount] = $token;
                             $tokenCount++;
@@ -102,5 +102,20 @@ trait MarcAdvancedTrait
         );
 
         return $returnValue;
+    }
+
+    /**
+     * Get the text of the part/section portion of the title.
+     * 
+     * AK: Separate by colon
+     * 
+     * @return string
+     */
+    public function getTitleSection()
+    {
+        
+        $matches = $this->getFieldArray('245', ['n', 'p'], true, ' : ');
+        return (is_array($matches) && count($matches) > 0) ?
+            $matches[0] : null;
     }
 }
