@@ -41,7 +41,12 @@ namespace AkSearch\RecordDriver;
 trait MarcAdvancedTrait
 {
 
-    use \VuFind\RecordDriver\MarcAdvancedTrait;
+    use \VuFind\RecordDriver\MarcBasicTrait, \VuFind\RecordDriver\MarcAdvancedTrait {
+        \VuFind\RecordDriver\MarcAdvancedTrait::getNewerTitles insteadof
+            \VuFind\RecordDriver\MarcBasicTrait;
+        \VuFind\RecordDriver\MarcAdvancedTrait::getPreviousTitles insteadof
+            \VuFind\RecordDriver\MarcBasicTrait;
+    }
 
     /**
      * AK: Get all subject headings associated with this record. Keyword chains are
@@ -105,6 +110,18 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * Get the full title of the record.
+     * 
+     * AK: We use only subfield "a" for the main title.
+     *
+     * @return string
+     */
+    public function getTitle()
+    {
+        return $this->getFirstFieldValue('245', ['a']);
+    }
+
+    /**
      * Get the text of the part/section portion of the title.
      * 
      * AK: Separate by colon
@@ -113,9 +130,45 @@ trait MarcAdvancedTrait
      */
     public function getTitleSection()
     {
-        
         $matches = $this->getFieldArray('245', ['n', 'p'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
             $matches[0] : null;
+    }
+
+    /**
+     * AK: Get the whole title of the record. This is the main title, subtitle and
+     *     title sections, separated by colon.
+     *
+     * @return string The whole title with it's parts separated by colon
+     */
+    public function getWholeTitle() {
+        $titleMain = trim($this->getTitle());
+        $titleSub = trim($this->getSubtitle());
+        $titleSec = trim($this->getTitleSection());
+        return implode(
+            ' : ',
+            array_filter(
+                [$titleMain, $titleSub, $titleSec],
+                array($this, 'filterCallback')
+            )
+        );
+    }
+
+    /**
+     * AK: Callback function for array_filter function in getWholeTitle method.
+     * Default array_filter would not only filter out empty or null values, but also
+     * the number "0" (as it evaluates to false). So if a title would just be "0" it
+     * would not be displayed.
+     *
+     * @param   string $var The value of an array. In our case these are strings.
+     * 
+     * @return  boolean     False if $var is null or empty, true otherwise.
+     */
+    protected function filterCallback($var) {
+        // Return false if $var is null or empty
+        if ($var == null || trim($var) == '') {
+            return false;
+        }
+        return true;
     }
 }
