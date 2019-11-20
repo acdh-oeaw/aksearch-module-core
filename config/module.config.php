@@ -71,9 +71,11 @@ $config = [
             ],
             'recorddriver' => [
                 'factories' => [
+                    'AkSearch\RecordDriver\SolrDefault' => 'VuFind\RecordDriver\SolrDefaultFactory',
                     'AkSearch\RecordDriver\SolrMarc' => 'VuFind\RecordDriver\SolrDefaultFactory'
                 ],
                 'aliases' => [
+                    'VuFind\RecordDriver\SolrDefault' => 'AkSearch\RecordDriver\SolrDefault',
                     'VuFind\RecordDriver\SolrMarc' => 'AkSearch\RecordDriver\SolrMarc'
                 ],
                 'delegators' => [
