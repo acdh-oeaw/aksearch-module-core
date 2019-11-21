@@ -113,12 +113,29 @@ trait MarcAdvancedTrait
      * Get the full title of the record.
      * 
      * AK: We use only subfield "a" for the main title.
+     *     UPDATE: Don't do this ... stick to default VuFind code! We use getShortTitle when necessary!
+     *
+     * @return string
+     */
+    /*
+    public function getTitle()
+    {
+        return $this->getFirstFieldValue('245', ['a']);
+    }
+    */
+
+    /**
+     * Get the full title of the record.
+     * 
+     * AK: Separate by colon
      *
      * @return string
      */
     public function getTitle()
     {
-        return $this->getFirstFieldValue('245', ['a']);
+        $matches = $this->getFieldArray('245', ['a', 'b'], true, ' : ');
+        return (is_array($matches) && count($matches) > 0) ?
+            $matches[0] : null;
     }
 
     /**
@@ -137,18 +154,18 @@ trait MarcAdvancedTrait
 
     /**
      * AK: Get the whole title of the record. This is the main title, subtitle and
-     *     title sections, separated by colon.
+     *     title sections, separated by colon. Info: With getTitle, we already get
+     *     the main title (245a) and the subtitle (245b), already separated by colon.
      *
      * @return string The whole title with it's parts separated by colon
      */
     public function getWholeTitle() {
-        $titleMain = trim($this->getTitle());
-        $titleSub = trim($this->getSubtitle());
-        $titleSec = trim($this->getTitleSection());
+        // AK: Join the title and title section together. With array_filter we remove
+        // possible empty values.
         return implode(
             ' : ',
             array_filter(
-                [$titleMain, $titleSub, $titleSec],
+                [trim($this->getTitle()), trim($this->getTitleSection())],
                 array($this, 'filterCallback')
             )
         );
@@ -170,5 +187,39 @@ trait MarcAdvancedTrait
             return false;
         }
         return true;
+    }
+
+    /**
+     * Get the main authors of the record.
+     * 
+     * AK: Don't get dates from subfield 'd'
+     *
+     * @return array
+     */
+    public function getPrimaryAuthorsWithoutDate()
+    {
+        $primary = $this->getFirstFieldValue('100', ['a', 'b', 'c']);
+        return empty($primary) ? [] : [$primary];
+    }
+
+    public function getPrimaryCorporateAuthorsWithoutDate() {
+        $primaryCorp = $this->getFirstFieldValue('110', ['a', 'b', 'c']);
+        return empty($primaryCorp) ? [] : [$primaryCorp];
+    }
+
+    /**
+     * Get an array of all secondary authors (complementing getPrimaryAuthors()).
+     * 
+     * AK: Don't get dates from subfield 'd'
+     *
+     * @return array
+     */
+    public function getSecondaryAuthorsWithoutDate()
+    {
+        return $this->getFieldArray('700', ['a', 'b', 'c']);
+    }
+
+    public function getSecondaryCorporateAuthorsWithoutDate() {
+        return $this->getFieldArray('710', ['a', 'b', 'c']);
     }
 }

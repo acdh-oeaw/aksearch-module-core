@@ -41,8 +41,8 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
         if (!$this->highlight) {
             return '';
         }
-        $titleMain = (isset($this->highlightDetails['title'][0]))
-            ? $this->highlightDetails['title'][0] : '';
+        $titleMain = (isset($this->highlightDetails['title_short'][0]))
+            ? $this->highlightDetails['title_short'][0] : '';
         
         // AK: Highlight subtitle - field must be added in searchspecs.yaml!
         $titleSub = (isset($this->highlightDetails['title_sub'][0]))
@@ -56,6 +56,8 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
         $titlePart = (isset($this->highlightDetails['title_part_txt'][0]))
         ? $this->highlightDetails['title_part_txt'][0] : '';
 
+        // AK: Join the title values together. With array_filter we remove possible
+        // empty values.
         return implode(
             ' : ',
             array_filter(

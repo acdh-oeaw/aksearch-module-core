@@ -53,15 +53,18 @@ class Record extends \VuFind\View\Helper\Root\Record
     public function getTitleHtml($maxLength = 180)
     {
         $highlightedTitle = $this->driver->tryMethod('getHighlightedTitle');
-        // AK: Add subtitle and title section to the main title, separated by colon
-        //     from each other
-        $titleMain = trim($this->driver->tryMethod('getTitle'));
-        $titleSub = trim($this->driver->tryMethod('getSubtitle'));
-        $titleSec = trim($this->driver->getTitleSection());
+        
+        // AK: Add title section to the main title, separated by colon from each
+        //     other. Info: With getTitle, we already get the main title (245a) and
+        //     the subtitle (245b), already separated by colon. With array_filter we
+        //     remove possible empty values.
         $title = implode(
             ' : ',
             array_filter(
-                [$titleMain, $titleSub, $titleSec],
+                [
+                    trim($this->driver->tryMethod('getTitle')),
+                    trim($this->driver->getTitleSection())
+                ],
                 array($this, 'filterCallback')
             )
         );
