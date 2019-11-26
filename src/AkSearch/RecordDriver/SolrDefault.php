@@ -84,5 +84,4 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
         }
         return true;
     }
-
 }

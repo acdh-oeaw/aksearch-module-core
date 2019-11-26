@@ -112,21 +112,6 @@ trait MarcAdvancedTrait
     /**
      * Get the full title of the record.
      * 
-     * AK: We use only subfield "a" for the main title.
-     *     UPDATE: Don't do this ... stick to default VuFind code! We use getShortTitle when necessary!
-     *
-     * @return string
-     */
-    /*
-    public function getTitle()
-    {
-        return $this->getFirstFieldValue('245', ['a']);
-    }
-    */
-
-    /**
-     * Get the full title of the record.
-     * 
      * AK: Separate by colon
      *
      * @return string
@@ -134,6 +119,13 @@ trait MarcAdvancedTrait
     public function getTitle()
     {
         $matches = $this->getFieldArray('245', ['a', 'b'], true, ' : ');
+        return (is_array($matches) && count($matches) > 0) ?
+            $matches[0] : null;
+    }
+
+    public function getContainerTitle()
+    {
+        $matches = $this->getFieldArray('PNT', ['a', 'b'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
             $matches[0] : null;
     }
@@ -148,6 +140,13 @@ trait MarcAdvancedTrait
     public function getTitleSection()
     {
         $matches = $this->getFieldArray('245', ['n', 'p'], true, ' : ');
+        return (is_array($matches) && count($matches) > 0) ?
+            $matches[0] : null;
+    }
+
+    public function getContainerTitleSection()
+    {
+        $matches = $this->getFieldArray('PNT', ['n', 'p'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
             $matches[0] : null;
     }
@@ -171,22 +170,31 @@ trait MarcAdvancedTrait
         );
     }
 
-    /**
-     * AK: Callback function for array_filter function in getWholeTitle method.
-     * Default array_filter would not only filter out empty or null values, but also
-     * the number "0" (as it evaluates to false). So if a title would just be "0" it
-     * would not be displayed.
-     *
-     * @param   string $var The value of an array. In our case these are strings.
-     * 
-     * @return  boolean     False if $var is null or empty, true otherwise.
-     */
-    protected function filterCallback($var) {
-        // Return false if $var is null or empty
-        if ($var == null || trim($var) == '') {
-            return false;
-        }
-        return true;
+    public function getWholeContainerTitle() {
+        // AK: Join the title and title section together. With array_filter we remove
+        // possible empty values.
+        return implode(
+            ' : ',
+            array_filter(
+                [
+                    trim($this->getContainerTitle()),
+                    trim($this->getContainerTitleSection())
+                ],
+                array($this, 'filterCallback')
+            )
+        );
+    }
+
+    public function getContainerVolume() {
+        return $this->getFirstFieldValue('VAR', ['v']);
+    }
+
+    public function getContainerIssue() {
+        return $this->getFirstFieldValue('VAR', ['i']);
+    }
+
+    public function getContainerStartPage() {
+        return $this->getFirstFieldValue('VAR', ['p']);
     }
 
     /**
@@ -222,4 +230,27 @@ trait MarcAdvancedTrait
     public function getSecondaryCorporateAuthorsWithoutDate() {
         return $this->getFieldArray('710', ['a', 'b', 'c']);
     }
+
+    public function getFormatsSolr() {
+        return isset($this->fields['format']) ? $this->fields['format'] : [];
+    }
+
+    /**
+     * AK: Callback function for array_filter function in getWholeTitle method.
+     * Default array_filter would not only filter out empty or null values, but also
+     * the number "0" (as it evaluates to false). So if a title would just be "0" it
+     * would not be displayed.
+     *
+     * @param   string $var The value of an array. In our case these are strings.
+     * 
+     * @return  boolean     False if $var is null or empty, true otherwise.
+     */
+    protected function filterCallback($var) {
+        // Return false if $var is null or empty
+        if ($var == null || trim($var) == '') {
+            return false;
+        }
+        return true;
+    }
+
 }

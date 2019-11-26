@@ -111,7 +111,8 @@ class Citation extends \VuFind\View\Helper\Root\Citation
             'pubName' => $publishers[0] ?? null,
             'pubDate' => $pubDates[0] ?? null,
             'edition' => empty($edition) ? [] : [$edition],
-            'journal' => $driver->tryMethod('getContainerTitle')
+            'journal' => $driver->tryMethod('getWholeContainerTitle')
+            //'journal' => $this->isDependentLit($driver) ? 'true' : null
         ];
 
         return $this;
@@ -246,4 +247,58 @@ class Citation extends \VuFind\View\Helper\Root\Citation
         }
     }
     */
+
+    protected function isDependentLit($driver) {
+        $dependentLitFormats = ['article', 'review', 'chapter', 'preface', 'essay',
+        'editorial', 'inverview', 'comment', 'introduction'];
+
+        foreach($driver->tryMethod('getFormatsSolr') as $format) {
+            if (in_array(strtolower($format), $dependentLitFormats)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected function getAPANumbersAndDate()
+    {
+        $vol = $this->driver->tryMethod('getContainerVolume');
+        $num = $this->driver->tryMethod('getContainerIssue');
+        $date = $this->details['pubDate'];
+        if (strlen($date) > 4) {
+            try {
+                $year = $this->dateConverter->convertFromDisplayDate('Y', $date);
+                $month = $this->dateConverter->convertFromDisplayDate('F', $date);
+                $day = $this->dateConverter->convertFromDisplayDate('j', $date);
+            } catch (DateException $e) {
+                // If conversion fails, use raw date as year -- not ideal,
+                // but probably better than nothing:
+                $year = $date;
+                $month = $day = '';
+            }
+        } else {
+            $year = $date;
+            $month = $day = '';
+        }
+
+        // We need to supply additional date information if no vol/num:
+        if (!empty($vol) || !empty($num)) {
+            // If only the number is non-empty, move the value to the volume to
+            // simplify template behavior:
+            if (empty($vol) && !empty($num)) {
+                $vol = $num;
+                $num = '';
+            }
+            return [$vol, $num, $year];
+        } else {
+            // Right now, we'll assume if day == 1, this is a monthly publication;
+            // that's probably going to result in some bad citations, but it's the
+            // best we can do without writing extra record driver methods.
+            $finalDate = $year
+                . (empty($month) ? '' : ', ' . $month)
+                . (($day > 1) ? ' ' . $day : '');
+            return ['', '', $finalDate];
+        }
+    }
+    
 }
