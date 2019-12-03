@@ -112,17 +112,16 @@ class Citation extends \VuFind\View\Helper\Root\Citation
             'pubDate' => $pubDates[0] ?? null,
             'edition' => empty($edition) ? [] : [$edition],
             'journal' => $driver->tryMethod('getWholeContainerTitle')
-            //'journal' => $this->isDependentLit($driver) ? 'true' : null
         ];
 
         return $this;
     }
 
-
     /**
      * Get the full title for an APA citation.
      * 
      * AK: Add title section. Add spaces before colon.
+     *     Info: MLA and Chicago are also using this function for getting the title.
      *
      * @return string
      */
@@ -152,153 +151,18 @@ class Citation extends \VuFind\View\Helper\Root\Citation
         return $title;
     }
 
-
     /**
-     * Get APA citation.
-     *
-     * This function assigns all the necessary variables and then returns an APA
-     * citation.
+     * Construct page range portion of citation.
+     * 
+     * AK: First try to get ready-to-use page range from datafield VAR, subfield p.
+     *     If that fails, try the default way of getting it.
      *
      * @return string
      */
-    /*
-    public function getCitationAPA()
+    protected function getPageRange()
     {
-        $apa = [
-            'title' => $this->getAPATitle(),
-            'authors' => $this->getAPAAuthors(),
-            'edition' => $this->getEdition()
-        ];
-        // Show a period after the title if it does not already have punctuation
-        // and is not followed by an edition statement:
-        $apa['periodAfterTitle']
-            = (!$this->isPunctuated($apa['title']) && empty($apa['edition']));
-
-        // Behave differently for books vs. journals:
-        $partial = $this->getView()->plugin('partial');
-        if (empty($this->details['journal'])) {
-            $apa['publisher'] = $this->getPublisher();
-            $apa['year'] = $this->getYear();
-            return $partial('Citation/apa.phtml', $apa);
-        } else {
-            list($apa['volume'], $apa['issue'], $apa['date'])
-                = $this->getAPANumbersAndDate();
-            $apa['journal'] = $this->details['journal'];
-            $apa['pageRange'] = $this->getPageRange();
-            if ($doi = $this->driver->tryMethod('getCleanDOI')) {
-                $apa['doi'] = $doi;
-            }
-            return $partial('Citation/apa-article.phtml', $apa);
-        }
-    }
-    */
-
-    /**
-     * Get Chicago Style citation.
-     *
-     * This function returns a Chicago Style citation using a modified version
-     * of the MLA logic.
-     *
-     * @return string
-     */
-    /*
-    public function getCitationChicago()
-    {
-        return $this->getCitationMLA(9, ', no. ');
-    }
-    */
-
-    /**
-     * Get MLA citation.
-     *
-     * This function assigns all the necessary variables and then returns an MLA
-     * citation. By adjusting the parameters below, it can also render a Chicago
-     * Style citation.
-     *
-     * @param int    $etAlThreshold   The number of authors to abbreviate with 'et
-     * al.'
-     * @param string $volNumSeparator String to separate volume and issue number
-     * in citation.
-     *
-     * @return string
-     */
-    /*
-    public function getCitationMLA($etAlThreshold = 4, $volNumSeparator = '.')
-    {
-        $mla = [
-            'title' => $this->getMLATitle(),
-            'authors' => $this->getMLAAuthors($etAlThreshold)
-        ];
-        $mla['periodAfterTitle'] = !$this->isPunctuated($mla['title']);
-
-        // Behave differently for books vs. journals:
-        $partial = $this->getView()->plugin('partial');
-        if (empty($this->details['journal'])) {
-            $mla['publisher'] = $this->getPublisher();
-            $mla['year'] = $this->getYear();
-            $mla['edition'] = $this->getEdition();
-            return $partial('Citation/mla.phtml', $mla);
-        } else {
-            // Add other journal-specific details:
-            $mla['pageRange'] = $this->getPageRange();
-            $mla['journal'] =  $this->capitalizeTitle($this->details['journal']);
-            $mla['numberAndDate'] = $this->getMLANumberAndDate($volNumSeparator);
-            return $partial('Citation/mla-article.phtml', $mla);
-        }
-    }
-    */
-
-    protected function isDependentLit($driver) {
-        $dependentLitFormats = ['article', 'review', 'chapter', 'preface', 'essay',
-        'editorial', 'inverview', 'comment', 'introduction'];
-
-        foreach($driver->tryMethod('getFormatsSolr') as $format) {
-            if (in_array(strtolower($format), $dependentLitFormats)) {
-                return true;
-            }
-        }
-        return false;
+        return $this->driver->tryMethod('getContainerPageRange')
+            ?? parent::getPageRange();
     }
 
-    protected function getAPANumbersAndDate()
-    {
-        $vol = $this->driver->tryMethod('getContainerVolume');
-        $num = $this->driver->tryMethod('getContainerIssue');
-        $date = $this->details['pubDate'];
-        if (strlen($date) > 4) {
-            try {
-                $year = $this->dateConverter->convertFromDisplayDate('Y', $date);
-                $month = $this->dateConverter->convertFromDisplayDate('F', $date);
-                $day = $this->dateConverter->convertFromDisplayDate('j', $date);
-            } catch (DateException $e) {
-                // If conversion fails, use raw date as year -- not ideal,
-                // but probably better than nothing:
-                $year = $date;
-                $month = $day = '';
-            }
-        } else {
-            $year = $date;
-            $month = $day = '';
-        }
-
-        // We need to supply additional date information if no vol/num:
-        if (!empty($vol) || !empty($num)) {
-            // If only the number is non-empty, move the value to the volume to
-            // simplify template behavior:
-            if (empty($vol) && !empty($num)) {
-                $vol = $num;
-                $num = '';
-            }
-            return [$vol, $num, $year];
-        } else {
-            // Right now, we'll assume if day == 1, this is a monthly publication;
-            // that's probably going to result in some bad citations, but it's the
-            // best we can do without writing extra record driver methods.
-            $finalDate = $year
-                . (empty($month) ? '' : ', ' . $month)
-                . (($day > 1) ? ' ' . $day : '');
-            return ['', '', $finalDate];
-        }
-    }
-    
 }

@@ -40,7 +40,6 @@ namespace AkSearch\RecordDriver;
  */
 trait MarcAdvancedTrait
 {
-
     use \VuFind\RecordDriver\MarcBasicTrait, \VuFind\RecordDriver\MarcAdvancedTrait {
         \VuFind\RecordDriver\MarcAdvancedTrait::getNewerTitles insteadof
             \VuFind\RecordDriver\MarcBasicTrait;
@@ -123,6 +122,12 @@ trait MarcAdvancedTrait
             $matches[0] : null;
     }
 
+    /**
+     * AK: Get the full title of the container. This is the main title (245a) and the
+     *     subtitle (245b) separated by colon.
+     *
+     * @return string
+     */
     public function getContainerTitle()
     {
         $matches = $this->getFieldArray('PNT', ['a', 'b'], true, ' : ');
@@ -144,6 +149,12 @@ trait MarcAdvancedTrait
             $matches[0] : null;
     }
 
+    /**
+     * AK: Get the text of the part/section portion of the container title, separated
+     *     by colon.
+     * 
+     * @return string
+     */
     public function getContainerTitleSection()
     {
         $matches = $this->getFieldArray('PNT', ['n', 'p'], true, ' : ');
@@ -170,9 +181,17 @@ trait MarcAdvancedTrait
         );
     }
 
+    /**
+     * AK: Get the whole title of the container. This is the main title, subtitle and
+     *     title sections, separated by colon. Info: With getContainerTitle, we
+     *     already get the main title (245a) and the subtitle (245b), already
+     *     separated by colon.
+     *
+     * @return string
+     */
     public function getWholeContainerTitle() {
         // AK: Join the title and title section together. With array_filter we remove
-        // possible empty values.
+        //     possible empty values.
         return implode(
             ' : ',
             array_filter(
@@ -185,18 +204,36 @@ trait MarcAdvancedTrait
         );
     }
 
+    /**
+     * AK: Get a volume number if available. This is the value from datafield VAR,
+     *     subfield v
+     *
+     * @return string   The value from datafield VAR, subfield v
+     */
     public function getContainerVolume() {
         return $this->getFirstFieldValue('VAR', ['v']);
     }
 
+    /**
+     * AK: Get an issue number if available. This is the value from datafield VAR,
+     *     subfield i
+     *
+     * @return string   The value from datafield VAR, subfield i
+     */
     public function getContainerIssue() {
         return $this->getFirstFieldValue('VAR', ['i']);
     }
 
-    public function getContainerStartPage() {
+    /**
+     * AK: Get the pages if available. This is the value from datafield VAR,
+     *     subfield p
+     *
+     * @return string   The value from datafield VAR, subfield p
+     */
+    public function getContainerPageRange() {
         return $this->getFirstFieldValue('VAR', ['p']);
     }
-
+    
     /**
      * Get the main authors of the record.
      * 
@@ -210,6 +247,12 @@ trait MarcAdvancedTrait
         return empty($primary) ? [] : [$primary];
     }
 
+    /**
+     * AK: Get an array of all primary corporate authors without date from
+     *     subfield 'd'.
+     *
+     * @return array
+     */
     public function getPrimaryCorporateAuthorsWithoutDate() {
         $primaryCorp = $this->getFirstFieldValue('110', ['a', 'b', 'c']);
         return empty($primaryCorp) ? [] : [$primaryCorp];
@@ -227,12 +270,14 @@ trait MarcAdvancedTrait
         return $this->getFieldArray('700', ['a', 'b', 'c']);
     }
 
+    /**
+     * AK: Get an array of all secondary corporate authors without date from
+     *     subfield 'd'.
+     *
+     * @return array
+     */
     public function getSecondaryCorporateAuthorsWithoutDate() {
         return $this->getFieldArray('710', ['a', 'b', 'c']);
-    }
-
-    public function getFormatsSolr() {
-        return isset($this->fields['format']) ? $this->fields['format'] : [];
     }
 
     /**
