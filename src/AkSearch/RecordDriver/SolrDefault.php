@@ -133,7 +133,7 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
      * if no thumbnail can be generated.
      * 
      * AK: Return also "contenttype" in array. See description for getThumbnail here:
-     *     https://vufind.org/wiki/development:architecture:record_driver_method_master_list
+     * https://vufind.org/wiki/development:architecture:record_driver_method_master_list
      *
      * @param string $size Size of thumbnail (small, medium or large -- small is
      * default).
@@ -152,11 +152,9 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
             'title'      => mb_substr($this->getTitle(), 0, 300, 'utf-8'),
             'recordid'   => $this->getUniqueID(),
             'source'   => $this->getSourceIdentifier(),
-            // AK: Use 'self::' as with using '$this->' we would use the function
-            //     from MarcBasicTrait (that is 'use'd in SolrMarc which extends this
-            //     class). MarcBasicTrait gets a MarcXml field instead of a Solr
-            //     field.
-            'contenttype' => self::getFormats()
+            // AK: Get the format for the tumbnail (icon). See also page on VuFind
+            // Wiki mentioned in this method doc.
+            'contenttype' => $this->getFormatForThumbnail()
         ];
         if ($isbn = $this->getCleanISBN()) {
             $arr['isbn'] = $isbn;
@@ -183,40 +181,36 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
         return $arr;
     }
 
-    public function getFormats() {
+    /**
+     * AK: Get the format for the record thumbnail (icon). We only return one format
+     * because an array of formats is not suitable for getting the icon (we can only
+     * get one image). If no format was found we return "unknown".
+     *
+     * @return string   The format for the tumbnail image
+     */
+    public function getFormatForThumbnail() {
+        // Initialize the return value with "null" as default
         $format = null;
 
-        // Use 'parent::' as with using '$this->' we would use the function from
-        // MarcBasicTrait (that is 'use'd in SolrMarc which extends this class).
+        // Use "parent::" as with using "$this->" we would use the function from
+        // MarcBasicTrait (that is "use"d in SolrMarc which extends this class).
         // MarcBasicTrait gets a MarcXml field instead of a Solr field.
         $formats = parent::getFormats();
 
         // Get the first value of the formats array. If there is no format, use
-        // 'Unknown'.
+        // "Unknown".
         $format = (count($formats) > 0) ? $formats[0] : 'Unknown';
 
-        // Tweak the output
-
-        // If DVD and CDROM is in the formats, only use DVD
-        /*
-        if (in_array('DVD', $formats) && in_array('CDROM', $formats)) {
-            $format = 'DVD';
-        }
-        */
-
-        // If Printed is in the formats and there is another value, use that other
-        // value.
+        // If we have more than one format and the value "Printed" is one of them,
+        // remove it. We use one of the other values.
         if (count($formats) > 1 && in_array('Printed', $formats)) {
             if (($key = array_search('Printed', $formats)) !== false) {
                 unset($formats[$key]);
-                //ini_set("xdebug.overload_var_dump",1);
-                //var_dump($formats);
                 $format = reset($formats);
             }
         }
 
-
-
+        // Return a lower case string of the format
         return strtolower($format);
     }
 }
