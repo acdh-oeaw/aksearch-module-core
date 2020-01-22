@@ -45,7 +45,8 @@ class RecordDataFormatterFactory
      * Get default specifications for displaying data in collection-info metadata.
      * 
      * AK: Added config "stackCells" for stacking table cells on top of each other
-     *     if configured. Long table contents need less space that way.
+     * if configured. Long table contents need less space that way. Also tweaked the
+     * display of the language of the record.
      *
      * @return array
      */
@@ -61,7 +62,20 @@ class RecordDataFormatterFactory
             'Format', 'getFormats', 'RecordHelper',
             ['helperMethod' => 'getFormatList']
         );
-        $spec->setLine('Language', 'getLanguages');
+
+        // AK: Commented out default display of the language of the record as this
+        // does not translate the language name. Now using more arguments in
+        // "setLine" method for translating the language name(s) in the records
+        // "core" view (= detail view of a record). See also pull request 413 at
+        // VuFind GitHub and there especially the "Files changed" section to get an
+        // example of the code used here:
+        // https://github.com/vufind-org/vufind/pull/413
+        // ORIGINAL: $spec->setLine('Language', 'getLanguages');
+        $spec->setLine(
+            'Language', 'getLanguages', null,
+            ['translate' => true, 'translationTextDomain' => 'Languages::']
+        );
+
         $spec->setTemplateLine(
             'Published', 'getPublicationDetails', 'data-publicationDetails.phtml'
         );
@@ -93,6 +107,7 @@ class RecordDataFormatterFactory
      *
      * AK: Added config "stackCells" for stacking table cells on top of each other
      *     if configured. Long table contents need less space that way.
+     *     Also tweaked the display of the language of the record.
      * 
      * @return array
      */
@@ -115,7 +130,20 @@ class RecordDataFormatterFactory
             'Format', 'getFormats', 'RecordHelper',
             ['helperMethod' => 'getFormatList']
         );
-        $spec->setLine('Language', 'getLanguages');
+
+        // AK: Commented out default display of the language of the record as this
+        // does not translate the language name. Now using more arguments in
+        // "setLine" method for translating the language name(s) in the records
+        // "core" view (= detail view of a record). See also pull request 413 at
+        // VuFind GitHub and there especially the "Files changed" section to get an
+        // example of the code used here:
+        // https://github.com/vufind-org/vufind/pull/413
+        // ORIGINAL: $spec->setLine('Language', 'getLanguages');
+        $spec->setLine(
+            'Language', 'getLanguages', null,
+            ['translate' => true, 'translationTextDomain' => 'Languages::']
+        );
+
         $spec->setTemplateLine(
             'Published', 'getPublicationDetails', 'data-publicationDetails.phtml'
         );
