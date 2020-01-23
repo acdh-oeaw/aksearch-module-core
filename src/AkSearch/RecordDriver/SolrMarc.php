@@ -44,14 +44,19 @@ class SolrMarc extends SolrDefault
     use MarcAdvancedTrait {
         getURLs as protected getURLsFromMarcXml;
         getLanguages as protected getLanguagesFromMarcXml;
+        // Method "getFormats" does not exist in MarcAdvancedTrait, but 
+        // MarcAdvancedTrait uses MarcBasicTrait where it exists.
+        getFormats as protected getFormatsFromMarcXml;
     }
+
 
     /**
      * Get an array of all the languages associated with the record.
      * 
-     * AK: Override the default "getLanguages" method. First get the language from
-     * the Solr field and then - as a fallback - from MarcXML. The translation of the
-     * language name is done in AkSearch\View\Helper\Root\RecordDataFormatterFactory
+     * AK: Override the default "getLanguages" method in MarcBasicTrait. First get
+     * the language from the Solr field and then - as a fallback - from MarcXML. The 
+     * translation of the language name is done in:
+     * @see \AkSearch\View\Helper\Root\RecordDataFormatterFactory
      *
      * @return array
      */
@@ -112,5 +117,114 @@ class SolrMarc extends SolrDefault
         }
        
         return $results;
+    }
+
+    /**
+     * Returns one of three things: a full URL to a thumbnail preview of the record
+     * if an image is available in an external system; an array of parameters to
+     * send to VuFind's internal cover generator if no fixed URL exists; or false
+     * if no thumbnail can be generated.
+     * 
+     * AK: Return also "contenttype" in array. See description for getThumbnail here:
+     * https://vufind.org/wiki/development:architecture:record_driver_method_master_list
+     *
+     * @param string $size Size of thumbnail (small, medium or large -- small is
+     * default).
+     *
+     * @return string|array|bool
+     */
+    public function getThumbnail($size = 'small')
+    {
+        if (isset($this->fields['thumbnail']) && $this->fields['thumbnail']) {
+            return $this->fields['thumbnail'];
+        }
+        $arr = [
+            'author'     => mb_substr($this->getPrimaryAuthor(), 0, 300, 'utf-8'),
+            'callnumber' => $this->getCallNumber(),
+            'size'       => $size,
+            'title'      => mb_substr(parent::getTitle(), 0, 300, 'utf-8'),
+            'recordid'   => $this->getUniqueID(),
+            'source'   => $this->getSourceIdentifier(),
+            // AK: Get the format for the tumbnail (icon). See also page on VuFind
+            // Wiki mentioned in this method doc.
+            'contenttype' => $this->getFormat()
+        ];
+        if ($isbn = $this->getCleanISBN()) {
+            $arr['isbn'] = $isbn;
+        }
+        if ($issn = $this->getCleanISSN()) {
+            $arr['issn'] = $issn;
+        }
+        if ($oclc = $this->getCleanOCLCNum()) {
+            $arr['oclc'] = $oclc;
+        }
+        if ($upc = $this->getCleanUPC()) {
+            $arr['upc'] = $upc;
+        }
+        // If an ILS driver has injected extra details, check for IDs in there
+        // to fill gaps:
+        if ($ilsDetails = $this->getExtraDetail('ils_details')) {
+            foreach (['isbn', 'issn', 'oclc', 'upc'] as $key) {
+                if (!isset($arr[$key]) && isset($ilsDetails[$key])) {
+                    $arr[$key] = $ilsDetails[$key];
+                }
+            }
+        }
+
+        return $arr;
+    }
+
+    /**
+     * AK: Get the format for the record thumbnail (icon). We only return one format
+     * because an array of formats is not suitable for getting the icon (we can only
+     * get one image). If no format was found we return "unknown".
+     *
+     * @return string   The format for the tumbnail image
+     */
+    public function getFormat() {
+        // Initialize the return value with "null" as default
+        $format = null;
+
+        $formats = $this->getFormats();
+
+        // Get the first value of the formats array. If there is no format, use
+        // "Unknown".
+        $format = (count($formats) > 0) ? $formats[0] : 'Unknown';
+
+        // If we have more than one format and the value "Printed" is one of them,
+        // remove it. We use one of the other values.
+        if (count($formats) > 1 && in_array('Printed', $formats)) {
+            if (($key = array_search('Printed', $formats)) !== false) {
+                unset($formats[$key]);
+                $format = reset($formats);
+            }
+        }
+
+        // Return a lower case string of the format
+        return strtolower($format);
+    }
+
+    /**
+     * AK: Overrides the getFormats method in MarcBasicTrait. Get the formats of the
+     * record from Solr and then - as a fallback - from MarcXML. If no formats were
+     * found we return an empty array.
+     *
+     * @return array   The formats of the record as an array
+     */
+    public function getFormats() {
+        // Initialize the return value with "null" as default
+        $formats = [];
+
+        // Get the formats from the Solr field by using the method from the parent.
+        $formats = parent::getFormats();
+
+        // Get the formats from MarcXML as a fallback. This is using the method from
+        // MarcBasicTrait (which in turn is "use"d by MarcAdvancedTrait).
+        if ($formats == null || empty($formats)) {
+            $formats = $this->getFormatsFromMarcXml();
+        }
+
+        // Return the formats
+        return $formats;
     }
 }
