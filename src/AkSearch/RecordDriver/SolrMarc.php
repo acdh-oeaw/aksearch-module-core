@@ -47,6 +47,7 @@ class SolrMarc extends SolrDefault
         // Method "getFormats" does not exist in MarcAdvancedTrait, but 
         // MarcAdvancedTrait uses MarcBasicTrait where it exists.
         getFormats as protected getFormatsFromMarcXml;
+        getBibliographicLevel as protected getBibliographicLevelFromMarcXml;
     }
 
 
@@ -227,4 +228,21 @@ class SolrMarc extends SolrDefault
         // Return the formats
         return $formats;
     }
+
+    /**
+     * AK: Overrides the getBibliographicLevel method in MarcAdvancedTrait. Get the
+     * level of the record from Solr and then - as a fallback - from MarcXML. If no
+     * level was found we return null.
+     *
+     * @return string|null   The level of the record as string or null
+     */
+    public function getBibliographicLevel()
+    {
+        $level = $this->fields['bibLevel_txtF'] ?? null;
+        if ($level == null) {
+            $level = $this->getBibliographicLevelFromMarcXml();
+        }
+        return $level;
+    }
+
 }
