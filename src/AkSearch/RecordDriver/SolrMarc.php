@@ -178,7 +178,7 @@ class SolrMarc extends SolrDefault
     /**
      * AK: Get the format for the record thumbnail (icon). We only return one format
      * because an array of formats is not suitable for getting the icon (we can only
-     * get one image). If no format was found we return "unknown".
+     * get one image). If no format was found we return "Unknown".
      *
      * @return string   The format for the tumbnail image
      */
@@ -192,17 +192,7 @@ class SolrMarc extends SolrDefault
         // "Unknown".
         $format = (count($formats) > 0) ? $formats[0] : 'Unknown';
 
-        // If we have more than one format and the value "Printed" is one of them,
-        // remove it. We use one of the other values.
-        if (count($formats) > 1 && in_array('Printed', $formats)) {
-            if (($key = array_search('Printed', $formats)) !== false) {
-                unset($formats[$key]);
-                $format = reset($formats);
-            }
-        }
-
-        // Return a lower case string of the format
-        return strtolower($format);
+        return $format;
     }
 
     /**
