@@ -47,13 +47,59 @@ trait MarcAdvancedTrait
             \VuFind\RecordDriver\MarcBasicTrait;
     }
 
+
+    public function getAllSubjects() {
+        $returnValue = [];
+
+        // 689 fields
+        $subjectFields689 = $this->getMarcRecord()->getFields('689');
+        foreach($subjectFields689 as $subjectField689) {
+            $ind1 = $subjectField689->getIndicator(1);
+            $ind2 = $subjectField689->getIndicator(2);
+            if (is_numeric($ind1) && is_numeric($ind2)) {
+                $subjectType689 = $subjectField689->getSubfield('D')->getData();
+                // Use only subject terms (designated by "s"), not e. g. person names
+                if ($subjectType689 == 's' || $subjectType689 == 'S') {
+                    $subfields689 = $subjectField689->getSubfields('[axvyzbcg]',
+                        true);
+                    $subfieldData689 = [];
+                    foreach($subfields689 as $subfield689) {
+                        $subfieldData689[] = $subfield689->getData();
+                    }
+                    $returnValue[] = join(', ', $subfieldData689);
+                }
+            }
+        }
+
+        // 982 fields
+        $subjectFields982  = $this->getMarcRecord()->getFields('982');
+        foreach($subjectFields982 as $subjectField982) {
+            // Don't use subfields with person or corporate names in it ("d" and
+            // "e"). We only want subject terms.
+            $subfields982 = $subjectField982->getSubfields('[abcfz]', true);
+            if (!empty($subfields982)) {
+                foreach($subfields982 as $subfield982) {
+                    $subfieldData982 = $subfield982->getData();
+                    
+                    $tokens982 = preg_split("/\s+[\/-]\s+/", $subfieldData982);
+                    foreach($tokens982 as $token982) {
+                        $returnValue[] = $token982;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($returnValue));
+    }
+
+
     /**
      * AK: Get all subject headings associated with this record. Keyword chains are
      *     buildt from 689 fields which is a specific field used by libraries in the
      *     german-speeking world.
      * 
-     * @param bool $extended Has no functionality here. Only exists to be compatible
-     *                       with the function "getAllSubjectHeadings" in
+     * @param bool $extended AK: Has no functionality here. Only exists to be
+     *                       compatible with the function "getAllSubjectHeadings" in
      *                       \VuFind\RecordDriver\MarcAdvancedTrait
      *
      * @return array
@@ -123,8 +169,8 @@ trait MarcAdvancedTrait
     }
 
     /**
-     * AK: Get the full title of the container. This is the main title (245a) and the
-     *     subtitle (245b) separated by colon.
+     * AK: Get the full title of the container. This is the main title and the
+     *     subtitle separated by colon.
      *
      * @return string
      */
@@ -233,6 +279,38 @@ trait MarcAdvancedTrait
     public function getContainerPageRange() {
         return $this->getFirstFieldValue('VAR', ['p']);
     }
+
+    /**
+     * AK: Get the first page if available. This is parsed from the value in
+     *     datafield VAR, subfield p
+     *
+     * @return string   The start page, paresed from datafield VAR, subfield p
+     */
+    public function getContainerStartPage() {
+        $startPage = null;
+        $pages = $this->getContainerPageRange();
+        if ($pages) {
+            $arr = preg_split('/\s*-\s*/', $pages);
+            $startPage = (count($arr)>0) ? trim($arr[0]) : null;
+        }
+        return $startPage;
+    }
+
+    /**
+     * AK: Get the end page if available. This is parsed from the value in
+     *     datafield VAR, subfield p
+     *
+     * @return string   The end page, parsed from datafield VAR, subfield p
+     */
+    public function getContainerEndPage() {
+        $endPage = null;
+        $pages = $this->getContainerPageRange();
+        if ($pages) {
+            $arr = preg_split('/\s*-\s*/', $pages);
+            $endPage = (count($arr)>1) ? trim($arr[1]) : null;
+        }
+        return $endPage;
+    }
     
     /**
      * Get the main authors of the record.
@@ -248,14 +326,45 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * Get the main author of the record.
+     * 
+     * AK: Don't get dates from subfield 'd'
+     *
+     * @return string
+     */
+    public function getPrimaryAuthorWithoutDate()
+    {
+        $authors = $this->getPrimaryAuthorsWithoutDate();
+        return $authors[0] ?? null;
+    }
+
+    /**
      * AK: Get an array of all primary corporate authors without date from
      *     subfield 'd'.
      *
      * @return array
      */
     public function getPrimaryCorporateAuthorsWithoutDate() {
-        $primaryCorp = $this->getFirstFieldValue('110', ['a', 'b', 'c']);
-        return empty($primaryCorp) ? [] : [$primaryCorp];
+        $primaryCorp = array_merge(
+            $this->getFieldArray('110', ['a', 'b', 'c']),
+            $this->getPrimaryMeetingNames()
+        );
+        return empty($primaryCorp) ? [] : [$primaryCorp[0]];
+    }
+
+    public function getPrimaryCorporateAuthorWithoutDate() {
+        $corpAuthors = $this->getPrimaryCorporateAuthorsWithoutDate();
+        return $corpAuthors[0] ?? null;
+    }
+
+    public function getPrimaryMeetingNames() {
+        $meetings = $this->getFirstFieldValue('111', ['a', 'c', 'd', 'e']);
+        return empty($meetings) ? [] : [$meetings];
+    }
+
+    public function getPrimaryMeetingName() {
+        $meetings = $this->getPrimaryMeetingNames();
+        return $meetings[0] ?? null;
     }
 
     /**
@@ -277,7 +386,22 @@ trait MarcAdvancedTrait
      * @return array
      */
     public function getSecondaryCorporateAuthorsWithoutDate() {
-        return $this->getFieldArray('710', ['a', 'b', 'c']);
+        return array_merge(
+            $this->getFieldArray('710', ['a', 'b', 'c']),
+            $this->getSecondaryMeetingNames()
+        );
+    }
+
+    public function getSecondaryMeetingNames() {
+        return $this->getFieldArray('711', ['a', 'c', 'd', 'e']);
+    }
+
+    public function getGenres() {
+        return $this->getFieldArray('655', ['a']);
+    }
+
+    public function getDissertationNotes() {
+        return $this->getFieldArray('502', ['a']);
     }
 
     /**

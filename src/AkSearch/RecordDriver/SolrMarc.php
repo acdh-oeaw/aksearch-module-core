@@ -48,6 +48,11 @@ class SolrMarc extends SolrDefault
         // MarcAdvancedTrait uses MarcBasicTrait where it exists.
         getFormats as protected getFormatsFromMarcXml;
         getBibliographicLevel as protected getBibliographicLevelFromMarcXml;
+        getGenres as protected getGenresFromMarcXml;
+        // Method "getCallNumbers" does not exist in MarcAdvancedTrait, but 
+        // MarcAdvancedTrait uses MarcBasicTrait where it exists.
+        getCallNumbers as protected getCallNumbersFromXml;
+        getAllSubjects as protected getAllSubjectsFromXml;
     }
 
 
@@ -234,5 +239,67 @@ class SolrMarc extends SolrDefault
         }
         return $level;
     }
+
+    /**
+     * AK: Overrides the getGenres method in MarcAdvancedTrait. Get the genre(s) of
+     * the record from Solr and then - as a fallback - from MarcXML. If no genre(s)
+     * were found we return null.
+     *
+     * @return array|null   The genre(s) of the record as array or null
+     */
+    public function getGenres() {
+        $genres = $this->fields['bibForm_txtF_mv'];
+        if ($genres == null) {
+            $genres = $this->getGenresFromMarcXml();
+        }
+        return $genres;
+    }
+
+    /**
+     * AK: Get subject terms from all corresponding Solr fields.
+     *
+     * @return array|null   All subject terms as an array or null
+     */
+    public function getAllSubjects() {
+
+        /*
+        return array_unique(
+            array_merge(
+                $this->fields['subject_txtF_mv'] ?? [],
+                $this->fields['subjectAkTopic_txt_mv'] ?? [],
+                $this->fields['subjectAkGeogr_txt_mv'] ?? [],
+                $this->fields['subjectAkPerson_txt_mv'] ?? [],
+                $this->fields['subjectAkCorporation_txt_mv'] ?? [],
+                $this->fields['subjectAkForm_txt_mv'] ?? [],
+                $this->fields['subjectAkEra_txt_mv'] ?? []
+            )
+        );
+        */
+        return $this->getAllSubjectsFromXml();
+    }
+
+    /**
+     * Get all content summaries (abstracts) from the corresponding Solr field.
+     *
+     * @return array|null   All content summaries (abstracts) as an array or null
+     */
+    public function getContentSummaries() {
+        return $this->fields['contentSummary_txt_mv'] ?? null;
+    }
+
+
+    public function getCallNumbers() {
+        $callNumbers = $this->fields['callnumber_txt_mv'] ?? null;
+        if ($callNumbers == null) {
+            $callNumbers = $this->getCallNumbersFromXml();
+        }
+        return $callNumbers;
+    }
+
+    public function getCallNumber() {
+        $callNumbers = $this->getCallNumbers();
+        return $callNumbers[0] ?? null;
+    }
+
 
 }
