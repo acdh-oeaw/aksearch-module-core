@@ -256,14 +256,14 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * AK: Get subject terms from all corresponding Solr fields.
+     * AK: Get subject terms from all corresponding Solr fields. As a fallback, get
+     * subjects from MarcXML.
      *
      * @return array|null   All subject terms as an array or null
      */
     public function getAllSubjects() {
 
-        /*
-        return array_unique(
+        $subjects = array_unique(
             array_merge(
                 $this->fields['subject_txtF_mv'] ?? [],
                 $this->fields['subjectAkTopic_txt_mv'] ?? [],
@@ -274,8 +274,12 @@ class SolrMarc extends SolrDefault
                 $this->fields['subjectAkEra_txt_mv'] ?? []
             )
         );
-        */
-        return $this->getAllSubjectsFromXml();
+
+        if (empty($subjects)) {
+            $subjects = $this->getAllSubjectsFromXml();
+        }
+
+        return (empty($subjects)) ? null : $subjects;
     }
 
     /**
