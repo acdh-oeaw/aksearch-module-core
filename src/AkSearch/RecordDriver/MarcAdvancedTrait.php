@@ -57,7 +57,9 @@ trait MarcAdvancedTrait
             $ind1 = $subjectField689->getIndicator(1);
             $ind2 = $subjectField689->getIndicator(2);
             if (is_numeric($ind1) && is_numeric($ind2)) {
-                $subjectType689 = $subjectField689->getSubfield('D')->getData();
+                $subjectType689 = ($subjectField689->getSubfield('D'))
+                    ? $subjectField689->getSubfield('D')->getData()
+                    : null;
                 // Use only subject terms (designated by "s"), not e. g. person names
                 if ($subjectType689 == 's' || $subjectType689 == 'S') {
                     $subfields689 = $subjectField689->getSubfields('[axvyzbcg]',
@@ -80,7 +82,6 @@ trait MarcAdvancedTrait
             if (!empty($subfields982)) {
                 foreach($subfields982 as $subfield982) {
                     $subfieldData982 = $subfield982->getData();
-                    
                     $tokens982 = preg_split("/\s+[\/-]\s+/", $subfieldData982);
                     foreach($tokens982 as $token982) {
                         $returnValue[] = $token982;
