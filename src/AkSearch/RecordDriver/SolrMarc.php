@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -42,6 +42,12 @@ class SolrMarc extends SolrDefault
     use \VuFind\RecordDriver\IlsAwareTrait;
     use \VuFind\RecordDriver\MarcReaderTrait;
     use MarcAdvancedTrait {
+        // Use the function with the name "getPublicationInfo" from \AkSearch\
+        // RecordDriver\MarcAdvancedTrait instead of the function with the same name
+        // in \VuFind\RecordDriver\MarcReaderTrait
+        \AkSearch\RecordDriver\MarcAdvancedTrait::getPublicationInfo insteadof
+            \VuFind\RecordDriver\MarcReaderTrait;
+
         getURLs as protected getURLsFromMarcXml;
         getLanguages as protected getLanguagesFromMarcXml;
         // Method "getFormats" does not exist in MarcAdvancedTrait, but 
@@ -55,7 +61,6 @@ class SolrMarc extends SolrDefault
         getAllSubjects as protected getAllSubjectsFromXml;
     }
 
-
     /**
      * Get an array of all the languages associated with the record.
      * 
@@ -66,7 +71,6 @@ class SolrMarc extends SolrDefault
      *
      * @return array
      */
-
     public function getLanguages()
     {
         $langs = $this->fields['language'] ?? null;
@@ -100,7 +104,8 @@ class SolrMarc extends SolrDefault
      *
      * @return array Array of arrays, each with keys "url", "desc" and "mime"
      */
-    public function getURLs() {
+    public function getURLs()
+    {
         $results = [];
         $urlsFromSolr = $this->fields['url'] ?? null;
 
@@ -187,7 +192,8 @@ class SolrMarc extends SolrDefault
      *
      * @return string   The format for the tumbnail image
      */
-    public function getFormat() {
+    public function getFormat()
+    {
         // Initialize the return value with "null" as default
         $format = null;
 
@@ -207,7 +213,8 @@ class SolrMarc extends SolrDefault
      *
      * @return array   The formats of the record as an array
      */
-    public function getFormats() {
+    public function getFormats()
+    {
         // Initialize the return value with "null" as default
         $formats = [];
 
@@ -247,7 +254,8 @@ class SolrMarc extends SolrDefault
      *
      * @return array|null   The genre(s) of the record as array or null
      */
-    public function getGenres() {
+    public function getGenres()
+    {
         $genres = $this->fields['bibForm_txtF_mv'];
         if ($genres == null) {
             $genres = $this->getGenresFromMarcXml();
@@ -261,8 +269,8 @@ class SolrMarc extends SolrDefault
      *
      * @return array|null   All subject terms as an array or null
      */
-    public function getAllSubjects() {
-
+    public function getAllSubjects()
+    {
         $subjects = array_unique(
             array_merge(
                 $this->fields['subject_txtF_mv'] ?? [],
@@ -274,11 +282,9 @@ class SolrMarc extends SolrDefault
                 $this->fields['subjectAkEra_txt_mv'] ?? []
             )
         );
-
         if (empty($subjects)) {
             $subjects = $this->getAllSubjectsFromXml();
         }
-
         return (empty($subjects)) ? null : $subjects;
     }
 
@@ -287,12 +293,19 @@ class SolrMarc extends SolrDefault
      *
      * @return array|null   All content summaries (abstracts) as an array or null
      */
-    public function getContentSummaries() {
+    public function getContentSummaries()
+    {
         return $this->fields['contentSummary_txt_mv'] ?? null;
     }
 
-
-    public function getCallNumbers() {
+    /**
+     * Get all call numbers from the corresponding Solr field. If nothing was found,
+     * get them from MarcXML as a fallback.
+     *
+     * @return array   An array with call numbers or an empty array
+     */
+    public function getCallNumbers()
+    {
         $callNumbers = $this->fields['callnumber_txt_mv'] ?? null;
         if ($callNumbers == null) {
             $callNumbers = $this->getCallNumbersFromXml();
@@ -300,10 +313,100 @@ class SolrMarc extends SolrDefault
         return $callNumbers;
     }
 
-    public function getCallNumber() {
+    /**
+     * Get the first call number that was found. Returns null if nothing was found.
+     *
+     * @return String|null  A call number or null
+     */
+    public function getCallNumber()
+    {
         $callNumbers = $this->getCallNumbers();
         return $callNumbers[0] ?? null;
     }
 
+
+    public function getAuthorsByRole() {
+        $participants = [];
+
+        $primaryName = $this->fields['author'][0] ?? null;
+        $primaryRole = $this->fields['author_role'][0] ?? null;
+        $primaryAuth = $this->fields['author_GndNo_str'] ?? null;
+
+        $corpName = $this->fields['author_corporate'][0] ?? null;
+        $corpRole = $this->fields['author_corporate_role'][0] ?? null;
+        $corpAuth = $this->fields['author_corporate_GndNo_str'] ?? null;
+
+        $meetingName = $this->fields['author_meeting_txt'] ?? null;
+        $meetingRole = $this->fields['author_meeting_role_str'] ?? null;
+        $meetingAuth = $this->fields['author_meeting_GndNo_str'] ?? null;
+
+        $secNames = $this->fields['author2_NameRoleGnd_str_mv'] ?? null;
+        $secCorps = $this->fields['author2_corporate_NameRoleGnd_str_mv'] ?? null;
+        $secMeetings = $this->fields['author2_meeting_NameRoleGnd_str_mv'] ?? null;
+
+        
+        var_dump($primaryName, $primaryRole, $primaryAuth);
+
+		if ($primaryName) {
+            $participants[$primaryRole][] = [$primaryAuth => $primaryName];
+        }
+        if ($secNames) {
+            foreach ($secNames as $key => $value) {
+    			if (($key % 3) == 0) { // First of 3 values
+    				$name = $value;
+    			} else if (($key % 3) == 1) { // Second of 3 values
+    				$role = $value;
+    			}  else if (($key % 3) == 2) { // Third and last of 3 values
+    				$gnd = $value;
+
+    				// We have all values now, add them to the return array:
+    				$participants[$role][] = [$gnd => $name];
+    			}
+    		}
+        }
+
+        if ($corpName) {
+            $participants[$corpRole][] = [$corpAuth => $corpName];
+        }
+        if ($secCorps) {
+            foreach ($secCorps as $key => $value) {
+    			if (($key % 3) == 0) { // First of 3 values
+    				$name = $value;
+    			} else if (($key % 3) == 1) { // Second of 3 values
+    				$role = $value;
+    			}  else if (($key % 3) == 2) { // Third and last of 3 values
+    				$gnd = $value;
+
+    				// We have all values now, add them to the return array:
+    				$participants[$role][] = [$gnd => $name];
+    			}
+    		}
+        }
+
+        if ($meetingName) {
+            $participants[$meetingRole][] = [$meetingAuth => $meetingName];
+        }
+        if ($secMeetings) {
+            foreach ($secMeetings as $key => $value) {
+    			if (($key % 3) == 0) { // First of 3 values
+    				$name = $value;
+    			} else if (($key % 3) == 1) { // Second of 3 values
+    				$role = $value;
+    			}  else if (($key % 3) == 2) { // Third and last of 3 values
+    				$gnd = $value;
+
+    				// We have all values now, add them to the return array:
+    				$participants[$role][] = [$gnd => $name];
+    			}
+    		}
+        }
+
+        var_dump($participants);
+        return $participants;
+
+
+        //var_dump($primary);
+        //var_dump($this->getSecondaryAuthors());
+    }
 
 }
