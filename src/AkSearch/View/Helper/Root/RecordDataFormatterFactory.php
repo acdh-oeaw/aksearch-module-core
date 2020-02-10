@@ -123,9 +123,15 @@ class RecordDataFormatterFactory
         $spec->setLine(
             'Previous Title', 'getPreviousTitles', null, ['recordLink' => 'title']
         );
+        /*
         $spec->setMultiLine(
             'Authors', 'getDeduplicatedAuthors', $this->getAuthorFunction()
         );
+        */
+        $spec->setMultiLine(
+            'Authors', 'getAuthorsByRole', null
+        );
+
         $spec->setLine(
             'Format', 'getFormats', 'RecordHelper',
             ['helperMethod' => 'getFormatList']
@@ -169,4 +175,55 @@ class RecordDataFormatterFactory
         $spec->setTemplateLine('Tags', true, 'data-tags.phtml');
         return $spec->getArray();
     }
+
+
+    /**
+     * Get the callback function for processing authors.
+     *
+     * @return Callable
+     */
+    /*
+    protected function getAuthorFunction()
+    {
+        return function ($data, $options) {
+            // Lookup array of singular/plural labels (note that Other is always
+            // plural right now due to lack of translation strings).
+            $labels = [
+                'primary' => ['Main Author', 'Main Authors'],
+                'corporate' => ['Corporate Author', 'Corporate Authors'],
+                'secondary' => ['Other Authors', 'Other Authors'],
+            ];
+            // Lookup array of schema labels.
+            $schemaLabels = [
+                'primary' => 'author',
+                'corporate' => 'creator',
+                'secondary' => 'contributor',
+            ];
+            // Lookup array of sort orders.
+            $order = ['primary' => 1, 'corporate' => 2, 'secondary' => 3];
+
+            // Sort the data:
+            $final = [];
+            foreach ($data as $type => $values) {
+                $final[] = [
+                    'label' => $labels[$type][count($values) == 1 ? 0 : 1],
+                    'values' => [$type => $values],
+                    'options' => [
+                        'pos' => $options['pos'] + $order[$type],
+                        'renderType' => 'RecordDriverTemplate',
+                        'template' => 'data-authors.phtml',
+                        'context' => [
+                            'type' => $type,
+                            'schemaLabel' => $schemaLabels[$type],
+                            'requiredDataFields' => [
+                                ['name' => 'role', 'prefix' => 'CreatorRoles::']
+                            ],
+                        ],
+                    ],
+                ];
+            }
+            return $final;
+        };
+    }
+    */
 }

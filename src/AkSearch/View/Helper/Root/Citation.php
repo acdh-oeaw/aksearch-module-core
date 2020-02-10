@@ -1,10 +1,10 @@
 <?php
 /**
- * Citation view helper
+ * AK: Extended citation view helper
  *
  * PHP version 7
  *
- * Copyright (C) Villanova University 2010.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -19,24 +19,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * @category VuFind
+ * @category AKsearch
  * @package  View_Helpers
- * @author   Demian Katz <demian.katz@villanova.edu>
- * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org/wiki/development Wiki
+ * @author   Michael Birkner <michael.birkner@akwien.at>
+ * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
+ * @link     https://vufind.org/wiki/development:plugins:view_helpers Wiki
  */
 namespace AkSearch\View\Helper\Root;
 
-use VuFind\Date\DateException;
-
 /**
- * Citation view helper
+ * AK: Extending citation view helper
  *
- * @category VuFind
+ * @category AKsearch
  * @package  View_Helpers
- * @author   Demian Katz <demian.katz@villanova.edu>
- * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
- * @link     https://vufind.org/wiki/development Wiki
+ * @author   Michael Birkner <michael.birkner@akwien.at>
+ * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
+ * @link     https://vufind.org/wiki/development:plugins:view_helpers Wiki
  */
 class Citation extends \VuFind\View\Helper\Root\Citation
 {
@@ -58,22 +56,22 @@ class Citation extends \VuFind\View\Helper\Root\Citation
 
         // AK: Don't use date subfield from author MARC field as this results in an
         //     erroneous output.
-        $primary = $driver->tryMethod('getPrimaryAuthorsWithoutDate');
+        $primary = $driver->tryMethod('getPrimaryAuthors');
         if (empty($primary)) {
-            $primary = $driver->tryMethod('getPrimaryCorporateAuthorsWithoutDate');
+            $primary = $driver->tryMethod('getCorporateAuthors');
         }
         if (!empty($primary)) {
             // AK: Removed [] as this produces a multidimentional array. When using
             //     the multidimentional array in "array_unique" function below, the
             //     PHP notice "Array to string conversion" is thrown.
-            //     TODO: Create pull request in master code!
+            //     TODO: Create pull request for master code!
             $authors = $primary;
         }
-        $secondary = $driver->tryMethod('getSecondaryAuthorsWithoutDate');
+        $secondary = $driver->tryMethod('getSecondaryAuthors');
         // AK: Use corporate author if no default secondary author was found
         if (empty($secondary)) {
             $secondary = $driver->tryMethod(
-                'getSecondaryCorporateAuthorsWithoutDate'
+                'getSecondaryCorporateAuthors'
             );
         }
         if (is_array($secondary) && !empty($secondary)) {
