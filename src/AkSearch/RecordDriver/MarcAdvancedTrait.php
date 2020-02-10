@@ -5,7 +5,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -47,8 +47,15 @@ trait MarcAdvancedTrait
             \VuFind\RecordDriver\MarcBasicTrait;
     }
 
-
-    public function getAllSubjects() {
+    /**
+     * Get all distinct subject terms as an array. We use fields 689 and 982. We
+     * don't return terms that are names of persons or corporations. We are only
+     * getting subjects with this function.
+     *
+     * @return array    An array of subject terms
+     */
+    public function getAllSubjects()
+    {
         $returnValue = [];
 
         // 689 fields
@@ -93,11 +100,15 @@ trait MarcAdvancedTrait
         return array_values(array_unique($returnValue));
     }
 
-
     /**
-     * AK: Get all subject headings associated with this record. Keyword chains are
-     *     buildt from 689 fields which is a specific field used by libraries in the
-     *     german-speeking world.
+     * AK: This function is used to get subjects for keyword chains.
+     *     We get all subject headings associated with this record. Keyword chains
+     *     are buildt from 689 fields which is a specific field used by
+     *     german-speaking libraries. We also have field 982 which is unique for some
+     *     austrian libraries.
+     *     TODO: Maybe we could use config to specify the fields that should be used
+     *     for keyword chains. That would make it more flexible for libraries that
+     *     are using other Marc fields.
      * 
      * @param bool $extended AK: Has no functionality here. Only exists to be
      *                       compatible with the function "getAllSubjectHeadings" in
@@ -105,7 +116,8 @@ trait MarcAdvancedTrait
      *
      * @return array
      */
-    public function getAllSubjectHeadings($extended = false) {
+    public function getAllSubjectHeadings($extended = false)
+    {
         $returnValue = [];
         $subjectFields = $this->getMarcRecord()->getFields('689');
 
@@ -166,7 +178,7 @@ trait MarcAdvancedTrait
     {
         $matches = $this->getFieldArray('245', ['a', 'b'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
-            $matches[0] : null;
+            $this->stripNonSortingChars($matches[0]) : null;
     }
 
     /**
@@ -179,7 +191,7 @@ trait MarcAdvancedTrait
     {
         $matches = $this->getFieldArray('PNT', ['a', 'b'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
-            $matches[0] : null;
+        $this->stripNonSortingChars($matches[0]) : null;
     }
 
     /**
@@ -193,7 +205,7 @@ trait MarcAdvancedTrait
     {
         $matches = $this->getFieldArray('245', ['n', 'p'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
-            $matches[0] : null;
+            $this->stripNonSortingChars($matches[0]) : null;
     }
 
     /**
@@ -206,7 +218,7 @@ trait MarcAdvancedTrait
     {
         $matches = $this->getFieldArray('PNT', ['n', 'p'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
-            $matches[0] : null;
+            $this->stripNonSortingChars($matches[0]) : null;
     }
 
     /**
@@ -216,7 +228,8 @@ trait MarcAdvancedTrait
      *
      * @return string The whole title with it's parts separated by colon
      */
-    public function getWholeTitle() {
+    public function getWholeTitle()
+    {
         // AK: Join the title and title section together. With array_filter we remove
         // possible empty values.
         return implode(
@@ -236,7 +249,8 @@ trait MarcAdvancedTrait
      *
      * @return string
      */
-    public function getWholeContainerTitle() {
+    public function getWholeContainerTitle()
+    {
         // AK: Join the title and title section together. With array_filter we remove
         //     possible empty values.
         return implode(
@@ -257,7 +271,8 @@ trait MarcAdvancedTrait
      *
      * @return string   The value from datafield VAR, subfield v
      */
-    public function getContainerVolume() {
+    public function getContainerVolume()
+    {
         return $this->getFirstFieldValue('VAR', ['v']);
     }
 
@@ -267,7 +282,8 @@ trait MarcAdvancedTrait
      *
      * @return string   The value from datafield VAR, subfield i
      */
-    public function getContainerIssue() {
+    public function getContainerIssue()
+    {
         return $this->getFirstFieldValue('VAR', ['i']);
     }
 
@@ -277,7 +293,8 @@ trait MarcAdvancedTrait
      *
      * @return string   The value from datafield VAR, subfield p
      */
-    public function getContainerPageRange() {
+    public function getContainerPageRange()
+    {
         return $this->getFirstFieldValue('VAR', ['p']);
     }
 
@@ -287,7 +304,8 @@ trait MarcAdvancedTrait
      *
      * @return string   The start page, paresed from datafield VAR, subfield p
      */
-    public function getContainerStartPage() {
+    public function getContainerStartPage()
+    {
         $startPage = null;
         $pages = $this->getContainerPageRange();
         if ($pages) {
@@ -298,12 +316,13 @@ trait MarcAdvancedTrait
     }
 
     /**
-     * AK: Get the end page if available. This is parsed from the value in
-     *     datafield VAR, subfield p
+     * AK: Get the end page if available. This is parsed from the value in datafield
+     *     VAR, subfield p
      *
      * @return string   The end page, parsed from datafield VAR, subfield p
      */
-    public function getContainerEndPage() {
+    public function getContainerEndPage()
+    {
         $endPage = null;
         $pages = $this->getContainerPageRange();
         if ($pages) {
@@ -314,95 +333,238 @@ trait MarcAdvancedTrait
     }
     
     /**
-     * Get the main authors of the record.
-     * 
-     * AK: Don't get dates from subfield 'd'
+     * AK: Get the main author of the record from field 100 or 700. Don't get dates
+     *     from subfield 'd' and remove non-sorting-characters.
      *
-     * @return array
+     * @return array An array with the first author name or an empty array
      */
-    public function getPrimaryAuthorsWithoutDate()
+    public function getPrimaryAuthors()
     {
-        $primary = $this->getFirstFieldValue('100', ['a', 'b', 'c']);
-        return empty($primary) ? [] : [$primary];
+        $primary = $this->getFieldArray('100', ['a', 'b', 'c']);
+        /*
+        $primary = (empty($primary))
+            ? $this->getFieldArray('700', ['a', 'b', 'c'])
+            : $primary;
+        */
+        return empty($primary) ? [] : $this->stripNonSortingChars([$primary[0]]);
     }
 
     /**
-     * Get the main author of the record.
-     * 
-     * AK: Don't get dates from subfield 'd'
+     * AK: Get the main author of the record as a string. Dates from subfield 'd' are
+     *     removed. Also non-sorting-characters are removed.
      *
-     * @return string
+     * @return string|null The author name as string or null
      */
-    public function getPrimaryAuthorWithoutDate()
+    public function getPrimaryAuthor()
     {
-        $authors = $this->getPrimaryAuthorsWithoutDate();
+        $authors = $this->getPrimaryAuthors();
         return $authors[0] ?? null;
     }
 
     /**
-     * AK: Get an array of all primary corporate authors without date from
-     *     subfield 'd'.
+     * AK: Get the main corporate author without date from subfield 'd'.
+     *     Non-sorting-characters are removed.
      *
-     * @return array
+     * @return array    An array with the first corporate author name or an empty
+     *                  array
      */
-    public function getPrimaryCorporateAuthorsWithoutDate() {
-        $primaryCorp = array_merge(
-            $this->getFieldArray('110', ['a', 'b', 'c']),
-            $this->getPrimaryMeetingNames()
-        );
-        return empty($primaryCorp) ? [] : [$primaryCorp[0]];
+    public function getCorporateAuthors()
+    {
+        $corps = $this->getFieldArray('110', ['a', 'b', 'c']);
+        /*
+        $corps = (empty($corps))
+            ? $this->getFieldArray('710', ['a', 'b', 'c'])
+            : $corps;
+        */
+        return empty($corps) ? [] : $this->stripNonSortingChars([$corps[0]]);
     }
-
-    public function getPrimaryCorporateAuthorWithoutDate() {
-        $corpAuthors = $this->getPrimaryCorporateAuthorsWithoutDate();
+    
+    /**
+     * AK: Get the first corporate author without date from subfield 'd'. Non-sorting
+     *     characters are already removed in getCorporateAuthors() (see above).
+     *
+     * @return String|null The author name as string or null
+     */
+    public function getCorporateAuthor()
+    {
+        $corpAuthors = $this->getCorporateAuthors();
         return $corpAuthors[0] ?? null;
     }
-
-    public function getPrimaryMeetingNames() {
-        $meetings = $this->getFirstFieldValue('111', ['a', 'c', 'd', 'e']);
-        return empty($meetings) ? [] : [$meetings];
+    
+    /**
+     * AK: Get the first meeting name. Non-sorting-characters are removed.
+     *
+     * @return array    An array with the first meeting name or an empty array
+     */
+    public function getMeetingAuthors()
+    {
+        $meetings = $this->getFieldArray('111', ['a', 'c', 'd', 'e']);
+        /*
+        $meetings = (empty($meetings))
+            ? $this->getFieldArray('711', ['a', 'c', 'd', 'e'])
+            : $meetings;
+        */
+        return empty($meeting) ? [] : $this->stripNonSortingChars([$meetings[0]]);
     }
 
-    public function getPrimaryMeetingName() {
-        $meetings = $this->getPrimaryMeetingNames();
+    /**
+     * AK: Get the first meeting name of all meeting names in Marc fields 111 or 711.
+     *     Non-sorting-characters are already removed in getMeetingNames() (see
+     *     above).
+     *
+     * @return String|null The first meeting name as string or null
+     */
+    public function getMeetingAuthor()
+    {
+        $meetings = $this->getMeetingAuthors();
         return $meetings[0] ?? null;
     }
 
     /**
-     * Get an array of all secondary authors (complementing getPrimaryAuthors()).
-     * 
-     * AK: Don't get dates from subfield 'd'
+     * AK: Get an array of all secondary authors. Don't get dates from subfield 'd'.
+     *     Non-sorting-characters are removed.
      *
-     * @return array
+     * @return array An array with all secondary authors or an empty array.
      */
-    public function getSecondaryAuthorsWithoutDate()
+    public function getSecondaryAuthors()
     {
-        return $this->getFieldArray('700', ['a', 'b', 'c']);
+        $secondary = $this->getFieldArray('700', ['a', 'b', 'c']);
+        /*
+        // Check if there is a 100 field. If not, the first entry in a 700 field is
+        // already used as the primary author, so we need to skip that one here as
+        // otherwise we would produce a duplicate.
+        $hasPrimary = (empty($this->getFieldArray('100', ['a', 'b', 'c'])))
+            ? false
+            : true; 
+        if (!empty($secondary) && !$hasPrimary) {
+            unset($secondary[0]);
+        }
+        */
+        return empty($secondary) ? [] : $this->stripNonSortingChars($secondary);
+    }   
+
+    /**
+     * AK: Get an array of all secondary corporate authors. Don't get dates from
+     *     subfield 'd'. Non-sorting-characters are removed.
+     *
+     * @return array An array with all secondary corporate authors or an empty array.
+     */
+    public function getSecondaryCorporateAuthors()
+    {
+        $secondary = $this->getFieldArray('710', ['a', 'b', 'c']);
+        /*
+        // Check if there is a 110 field. If not, the first entry in a 710 field is
+        // already used as the primary corporate author, so we need to skip that one
+        // here as otherwise we would produce a duplicate.
+        $hasPrimary = (empty($this->getFieldArray('110', ['a', 'b', 'c'])))
+            ? false
+            : true; 
+        if (!empty($secondary) && !$hasPrimary) {
+            unset($secondary[0]);
+        }
+        */
+        return empty($secondary) ? [] : $this->stripNonSortingChars($secondary);
     }
 
     /**
-     * AK: Get an array of all secondary corporate authors without date from
-     *     subfield 'd'.
+     * AK: Get an array of all secondary meeting names.
+     *
+     * @return array An array with all secondary meeting names or an empty array.
+     */
+    public function getSecondaryMeetingAuthors()
+    {
+        $secondary = $this->getFieldArray('711', ['a', 'c', 'd', 'e']);
+        /*
+        // Check if there is a 111 field. If not, the first entry in a 711 field is
+        // already used as the primary meeting name, so we need to skip that one
+        // here as otherwise we would produce a duplicate.
+        $hasPrimary = (empty($this->getFieldArray('111', ['a', 'c', 'd', 'e'])))
+            ? false
+            : true; 
+        if (!empty($secondary) && !$hasPrimary) {
+            unset($secondary[0]);
+        }
+        */
+        return empty($secondary) ? [] : $this->stripNonSortingChars($secondary);
+    }
+
+    /**
+     * AK: Get an array of all genres.
      *
      * @return array
      */
-    public function getSecondaryCorporateAuthorsWithoutDate() {
-        return array_merge(
-            $this->getFieldArray('710', ['a', 'b', 'c']),
-            $this->getSecondaryMeetingNames()
-        );
-    }
-
-    public function getSecondaryMeetingNames() {
-        return $this->getFieldArray('711', ['a', 'c', 'd', 'e']);
-    }
-
-    public function getGenres() {
+    public function getGenres()
+    {
         return $this->getFieldArray('655', ['a']);
     }
 
-    public function getDissertationNotes() {
+    /**
+     * AK: Get an array of all dissertation notes.
+     *
+     * @return array
+     */
+    public function getDissertationNotes()
+    {
         return $this->getFieldArray('502', ['a']);
+    }
+
+    /**
+     * Get the item's publication information
+     * 
+     * AK: We overwrite the function with the same name in \VuFind\RecordDriver\
+     * MarcReaderTrait. We also use fields with indicator 3.
+     *
+     * @param string $subfield The subfield to retrieve ('a' = location, 'c' = date)
+     *
+     * @return array
+     */
+    protected function getPublicationInfo($subfield = 'a')
+    {
+        // Get string separator for publication information:
+        $separator = isset($this->mainConfig->Record->marcPublicationInfoSeparator)
+            ? $this->mainConfig->Record->marcPublicationInfoSeparator : ' ';
+
+        // First check old-style 260 field:
+        $results = $this->getFieldArray('260', [$subfield], true, $separator);
+
+        // Now track down relevant RDA-style 264 fields; we only care about
+        // copyright and publication places (and ignore copyright places if
+        // publication places are present).  This behavior is designed to be
+        // consistent with default SolrMarc handling of names/dates.
+        // AK: We also use values in fields with indicator 3 (manufacture places and
+        // dates) as we have some of them in our data. See also original code in
+        // \VuFind\RecordDriver\MarcReaderTrait
+        $pubResults = $copyResults = [];
+
+        $fields = $this->getMarcRecord()->getFields('264');
+        if (is_array($fields)) {
+            foreach ($fields as $currentField) {
+                $currentVal = $this
+                    ->getSubfieldArray($currentField, [$subfield], true, $separator);
+                if (!empty($currentVal)) {
+                    switch ($currentField->getIndicator('2')) {
+                    // AK: We also use indicator 3. The code in \VuFind\RecordDriver\
+                    // MarcReaderTrait only uses indicator 1.
+                    case '1':
+                    case '3':
+                        $pubResults = array_merge($pubResults, $currentVal);
+                        break;
+                    case '4':
+                        $copyResults = array_merge($copyResults, $currentVal);
+                        break;
+                    }
+                }
+            }
+        }
+        $replace260 = isset($this->mainConfig->Record->replaceMarc260)
+            ? $this->mainConfig->Record->replaceMarc260 : false;
+        if (count($pubResults) > 0) {
+            return $replace260 ? $pubResults : array_merge($results, $pubResults);
+        } elseif (count($copyResults) > 0) {
+            return $replace260 ? $copyResults : array_merge($results, $copyResults);
+        }
+
+        return $results;
     }
 
     /**
@@ -415,12 +577,28 @@ trait MarcAdvancedTrait
      * 
      * @return  boolean     False if $var is null or empty, true otherwise.
      */
-    protected function filterCallback($var) {
+    protected function filterCallback($var)
+    {
         // Return false if $var is null or empty
         if ($var == null || trim($var) == '') {
             return false;
         }
         return true;
+    }
+
+    protected function stripNonSortingChars($data) {
+        if (is_string($data)) {
+            return preg_replace('/<<|>>/', '', $data);
+        }
+
+        if (is_array($data)) {
+            return array_map(
+                function($value) {
+                    return preg_replace('/<<|>>/', '', $value);
+                },
+                $data
+            );
+        }
     }
 
 }
