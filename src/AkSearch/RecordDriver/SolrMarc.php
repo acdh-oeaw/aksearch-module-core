@@ -325,31 +325,52 @@ class SolrMarc extends SolrDefault
     }
 
 
-    public function getAuthorsByRole() {
-        $participants = [];
+    /**
+     * Get all possible contributors grouped by role in the right order.
+     * TODO: Make that function shorter and cleaner!
+     *
+     * @return void
+     */
+    public function getContributorsByRole() {
+        // Initialize return variable
+        $contributors = [];
 
+        // Get primary author
         $primaryName = $this->fields['author'][0] ?? null;
         $primaryRole = $this->fields['author_role'][0] ?? null;
         $primaryAuth = $this->fields['author_GndNo_str'] ?? null;
 
+        // Get primary corporate author
         $corpName = $this->fields['author_corporate'][0] ?? null;
         $corpRole = $this->fields['author_corporate_role'][0] ?? null;
         $corpAuth = $this->fields['author_corporate_GndNo_str'] ?? null;
 
+        // Get primary meeting author
         $meetingName = $this->fields['author_meeting_txt'] ?? null;
         $meetingRole = $this->fields['author_meeting_role_str'] ?? null;
         $meetingAuth = $this->fields['author_meeting_GndNo_str'] ?? null;
 
+        // Get secondary authors
         $secNames = $this->fields['author2_NameRoleGnd_str_mv'] ?? null;
+
+        // Get secondary corporate authors
         $secCorps = $this->fields['author2_corporate_NameRoleGnd_str_mv'] ?? null;
+
+        // Get secondary meeting authors
         $secMeetings = $this->fields['author2_meeting_NameRoleGnd_str_mv'] ?? null;
 
-        
-        var_dump($primaryName, $primaryRole, $primaryAuth);
-
+        // Add primary authors to array
 		if ($primaryName) {
-            $participants[$primaryRole][] = [$primaryAuth => $primaryName];
+            $contributors[$primaryRole][$primaryAuth] = $primaryName;
         }
+        if ($corpName) {
+            $contributors[$corpRole][$corpAuth] = $corpName;
+        }
+        if ($meetingName) {
+            $contributors[$meetingRole][$meetingAuth] = $meetingName;
+        }
+
+        // Add secondary authors to array
         if ($secNames) {
             foreach ($secNames as $key => $value) {
     			if (($key % 3) == 0) { // First of 3 values
@@ -360,13 +381,9 @@ class SolrMarc extends SolrDefault
     				$gnd = $value;
 
     				// We have all values now, add them to the return array:
-    				$participants[$role][] = [$gnd => $name];
+    				$contributors[$role][$gnd] = $name;
     			}
     		}
-        }
-
-        if ($corpName) {
-            $participants[$corpRole][] = [$corpAuth => $corpName];
         }
         if ($secCorps) {
             foreach ($secCorps as $key => $value) {
@@ -378,13 +395,9 @@ class SolrMarc extends SolrDefault
     				$gnd = $value;
 
     				// We have all values now, add them to the return array:
-    				$participants[$role][] = [$gnd => $name];
+    				$contributors[$role][$gnd] = $name;
     			}
     		}
-        }
-
-        if ($meetingName) {
-            $participants[$meetingRole][] = [$meetingAuth => $meetingName];
         }
         if ($secMeetings) {
             foreach ($secMeetings as $key => $value) {
@@ -396,17 +409,12 @@ class SolrMarc extends SolrDefault
     				$gnd = $value;
 
     				// We have all values now, add them to the return array:
-    				$participants[$role][] = [$gnd => $name];
+    				$contributors[$role][$gnd] = $name;
     			}
     		}
         }
 
-        var_dump($participants);
-        return $participants;
-
-
-        //var_dump($primary);
-        //var_dump($this->getSecondaryAuthors());
+        return $contributors;
     }
 
 }
