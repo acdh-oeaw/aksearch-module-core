@@ -53,9 +53,9 @@ class RecordDataFormatterFactory
     public function getDefaultCollectionInfoSpecs()
     {
         $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
-
+        // AK: Getting authors by role
         $spec->setMultiLine(
-            'Authors', 'getDeduplicatedAuthors', $this->getAuthorFunction()
+            'Authors', 'getContributorsByRole', $this->getAuthorFunction()
         );
         $spec->setLine('Summary', 'getSummary');
         $spec->setLine(
@@ -123,15 +123,10 @@ class RecordDataFormatterFactory
         $spec->setLine(
             'Previous Title', 'getPreviousTitles', null, ['recordLink' => 'title']
         );
-        /*
+        // AK: Getting authors by role
         $spec->setMultiLine(
-            'Authors', 'getDeduplicatedAuthors', $this->getAuthorFunction()
+            'Authors', 'getContributorsByRole', $this->getAuthorFunction()
         );
-        */
-        $spec->setMultiLine(
-            'Authors', 'getAuthorsByRole', null
-        );
-
         $spec->setLine(
             'Format', 'getFormats', 'RecordHelper',
             ['helperMethod' => 'getFormatList']
@@ -176,54 +171,50 @@ class RecordDataFormatterFactory
         return $spec->getArray();
     }
 
-
     /**
-     * Get the callback function for processing authors.
+     * AK: Get a callback function for getting authors/contributors.
+     * See https://vufind.org/wiki/development:architecture:record_data_formatter
      *
      * @return Callable
      */
-    /*
-    protected function getAuthorFunction()
-    {
+    protected function getAuthorFunction() {
+        // The function to return
         return function ($data, $options) {
-            // Lookup array of singular/plural labels (note that Other is always
-            // plural right now due to lack of translation strings).
-            $labels = [
-                'primary' => ['Main Author', 'Main Authors'],
-                'corporate' => ['Corporate Author', 'Corporate Authors'],
-                'secondary' => ['Other Authors', 'Other Authors'],
-            ];
-            // Lookup array of schema labels.
-            $schemaLabels = [
-                'primary' => 'author',
-                'corporate' => 'creator',
-                'secondary' => 'contributor',
-            ];
-            // Lookup array of sort orders.
-            $order = ['primary' => 1, 'corporate' => 2, 'secondary' => 3];
-
-            // Sort the data:
-            $final = [];
-            foreach ($data as $type => $values) {
-                $final[] = [
-                    'label' => $labels[$type][count($values) == 1 ? 0 : 1],
-                    'values' => [$type => $values],
+            // Initialize the result array
+            $result = [];
+            // Initialize a counter. This is used for the display position of the
+            // author roles. We use a simple counter as the roles and author values
+            // should be displayed in the order we get them from the RecordDriver
+            // function getContributorsByRole().
+            $order = 0;
+            foreach ($data as $role => $values) {
+                $order++;
+                $result[] = [
+                    // The label for the table row. We use a translation prefix as
+                    // the translation of the roles are in a separate subfolder of
+                    // the languages folder (named "CreatorRoles").
+                    'label' => 'CreatorRoles::'.$role,
+                    // The values to display. This is an array in the form
+                    // ["authId" => "Contributor Name"]. The value of the array is
+                    // displayed.
+                    'values' => $values,
                     'options' => [
-                        'pos' => $options['pos'] + $order[$type],
+                        // The position/order where this entry should be displayed.
+                        'pos' => $options['pos'] + $order,
+                        // Indicates that we want to use a .phtml template
                         'renderType' => 'RecordDriverTemplate',
+                        // The .phtml template to use
                         'template' => 'data-authors.phtml',
+                        // Values that are passed to the template
                         'context' => [
-                            'type' => $type,
-                            'schemaLabel' => $schemaLabels[$type],
-                            'requiredDataFields' => [
-                                ['name' => 'role', 'prefix' => 'CreatorRoles::']
-                            ],
-                        ],
-                    ],
+                            'role' => $role,
+                            'authId' => key($values)
+                        ]
+                    ]
                 ];
             }
-            return $final;
+            return $result;
         };
     }
-    */
+
 }
