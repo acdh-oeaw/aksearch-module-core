@@ -40,7 +40,11 @@ namespace AkSearch\RecordDriver;
  */
 trait MarcAdvancedTrait
 {
-    use \VuFind\RecordDriver\MarcBasicTrait, \VuFind\RecordDriver\MarcAdvancedTrait {
+    use \VuFind\RecordDriver\MarcBasicTrait {
+        getShortTitle as protected getShortTitleFromMarcBasicTrait;
+        getSubtitle as protected getSubtitleFromMarcBasicTrait;
+    }
+    use \VuFind\RecordDriver\MarcAdvancedTrait {
         \VuFind\RecordDriver\MarcAdvancedTrait::getNewerTitles insteadof
             \VuFind\RecordDriver\MarcBasicTrait;
         \VuFind\RecordDriver\MarcAdvancedTrait::getPreviousTitles insteadof
@@ -97,7 +101,7 @@ trait MarcAdvancedTrait
             }
         }
 
-        return array_values(array_unique($returnValue));
+        return array_values(array_unique($this->stripNonSortingChars($returnValue)));
     }
 
     /**
@@ -164,7 +168,7 @@ trait MarcAdvancedTrait
             'unserialize', array_unique(array_map('serialize', $returnValue))
         );
 
-        return $returnValue;
+        return $this->stripNonSortingChars($returnValue);
     }
 
     /**
@@ -179,6 +183,30 @@ trait MarcAdvancedTrait
         $matches = $this->getFieldArray('245', ['a', 'b'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
             $this->stripNonSortingChars($matches[0]) : null;
+    }
+
+    /**
+     * Get the short (pre-subtitle) title of the record.
+     * 
+     * AK: Remove non-sorting-characters
+     *
+     * @return string
+     */
+    public function getShortTitle()
+    {
+        return $this->stripNonSortingChars($this->getShortTitleFromMarcBasicTrait());
+    }
+
+    /**
+     * Get the subtitle of the record.
+     * 
+     * AK: Remove non-sorting-characters
+     *
+     * @return string
+     */
+    public function getSubtitle()
+    {
+        return $this->stripNonSortingChars($this->getSubtitleFromMarcBasicTrait());
     }
 
     /**
