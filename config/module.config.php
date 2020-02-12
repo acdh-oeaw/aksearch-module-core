@@ -89,6 +89,14 @@ $config = [
                     ]
                 ]
             ],
+            'recordtab' => [
+                'factories' => [
+                    'AkSearch\RecordTab\Parts' => '\Zend\ServiceManager\Factory\InvokableFactory'
+                ],
+                'aliases' => [
+                    'parts' => 'AkSearch\RecordTab\Parts'
+                ]
+            ],
             'search_backend' => [
                 'factories' => [
                     'Solr' => 'AkSearch\Search\Factory\SolrDefaultBackendFactory'

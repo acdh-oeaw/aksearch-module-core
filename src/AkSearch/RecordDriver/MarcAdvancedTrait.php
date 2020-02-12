@@ -596,16 +596,26 @@ trait MarcAdvancedTrait
     }
 
     /**
-     * AK: Callback function for array_filter function in getWholeTitle method.
+     * AK: Check if the MarcXML record has child records by checking if CLD tags
+     * exists.
+     *
+     * @return boolean  True if child records exists, false otherwise
+     */
+    public function hasChilds() {
+        return empty($this->getFieldArray('CLD')) ? false : true;
+    }
+
+    /**
+     * AK: Callback function for array_filter function.
      * Default array_filter would not only filter out empty or null values, but also
-     * the number "0" (as it evaluates to false). So if a title would just be "0" it
-     * would not be displayed.
+     * the number "0" (as it evaluates to false). So if a value (e. g. a title) would
+     * just be "0" it would not be displayed.
      *
      * @param   string $var The value of an array. In our case these are strings.
      * 
      * @return  boolean     False if $var is null or empty, true otherwise.
      */
-    protected function filterCallback($var)
+    public function filterCallback($var)
     {
         // Return false if $var is null or empty
         if ($var == null || trim($var) == '') {
@@ -614,6 +624,15 @@ trait MarcAdvancedTrait
         return true;
     }
 
+    /**
+     * AK: Remove non-sorting-characters "<<" and ">>" from the provided data. The
+     * data can be a string or an array.
+     *
+     * @param   String|array $data  That data from which the non-sorting-characters
+     *                              should be removed.
+     * 
+     * @return  String|array        String or array without non-sorting-characters
+     */
     protected function stripNonSortingChars($data) {
         if (is_string($data)) {
             return preg_replace('/<<|>>/', '', $data);

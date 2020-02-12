@@ -108,10 +108,10 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
     }
 
     /**
-     * AK: Callback function for array_filter function in getHighlightedTitle method.
+     * AK: Callback function for array_filter function.
      * Default array_filter would not only filter out empty or null values, but also
-     * the number "0" (as it evaluates to false). So if a title would just be "0" it
-     * would not be displayed.
+     * the number "0" (as it evaluates to false). So if a value (e. g. a title) would
+     * just be "0" it would not be displayed.
      *
      * @param   string $var The value of an array. In our case these are strings.
      * 
