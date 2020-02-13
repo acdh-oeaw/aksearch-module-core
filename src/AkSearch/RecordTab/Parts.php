@@ -51,27 +51,29 @@ class Parts extends \VuFind\RecordTab\AbstractBase
                 $title = empty(trim($title)) ? 'NoTitle' : $title;
 
                 $result[] = [
+                    'id' => $child['id'],
+                    'type' => $child['type'] ?? null,
                     'title' => $title,
-                    // TODO: AK: Check if we also need volume number from field 490.
-                    // If yes, we need to add it in xQuery code for relation.
-                    'volNo' => $child['volNo830v'] ?? $child['volNo245n'] ?? null,
                     'edition' => $child['edition'] ?? null,
                     'pubYear' => $child['pubYear'] ?? null,
-                    'type' => $child['type'] ?? null,
-                    'orderNo' => $child['orderNo'] ?? null,
-                    'id' => $child['id']
+                    'volNo' => $child['volNo'] ?? null,
+                    'issNo' => $child['issNo'] ?? null,
+                    'pgNos' => $child['pgNos'] ?? null,
+                    'orderNo' => $child['orderNo'] ?? null
                 ];
             }
 
             // Arrays for sorting
             $pubYears = array_column($result, 'pubYear');
             $volNos = array_column($result, 'volNo');
+            $issNos = array_column($result, 'issNo');
             $orderNos = array_column($result, 'orderNo');
 
             // Sort result array by multiple aspects
             array_multisort (
                 $pubYears, SORT_DESC,
                 $volNos, SORT_DESC,
+                $issNos, SORT_DESC,
                 $orderNos, SORT_DESC,
                 $result
             );

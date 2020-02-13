@@ -442,61 +442,61 @@ class SolrMarc extends SolrDefault
         $solr = $this->fields['childs_txt_mv'] ?? null;
         if ($solr) {
             $defaultSolrValues = ['NoRemainder', 'NoPartName', 'NoEdt', 'NoYear',
-                'NoNo', 'NoRelPart', 'NoEnumNo', 'NoVolNo', 'NoType', 'NoOrderNo',
-                'NoAc', 'NoId'];
+                'NoRelPart', 'NoEnumNo', 'NoForm', 'NoVolNo', 'NoIssNo', 'NoPg',
+                'NoOrderNo', 'NoAc', 'NoId'];
 
             foreach ($solr as $key => $value) {
-    			if (($key % 13) == 0) { // First of 13 values
+    			if (($key % 14) == 0) { // First of 14 values
     				$title = (in_array($value, $defaultSolrValues)) ? null : $value;
-    			} else if (($key % 13) == 1) { // Second of 13 values
+    			} else if (($key % 14) == 1) { // Second of 14 values
     				$subTitle = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-    			} else if (($key % 13) == 2) { // Third of 13 values
+    			} else if (($key % 14) == 2) { // Third of 14 values
                     $partTitle = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 13) == 3) {
+                } else if (($key % 14) == 3) {
                     $edition = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 13) == 4) {
+                } else if (($key % 14) == 4) {
                     $pubYear = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 13) == 5) {
-                    $volNo245n = (in_array($value, $defaultSolrValues))
-                        ? null
-                        : $value;
-                } else if (($key % 13) == 6) {
+                } else if (($key % 14) == 5) {
                     $relatedPart = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 13) == 7) {
+                } else if (($key % 14) == 6) {
                     $enumeration = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 13) == 8) {
-                    $volNo830v = (in_array($value, $defaultSolrValues))
+                } else if (($key % 14) == 7) {
+                    $form = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 13) == 9) {
-                    $type = (in_array($value, $defaultSolrValues)) ? null : $value;
-                } else if (($key % 13) == 10) {
+                } else if (($key % 14) == 8) {
+                    $volNo = (in_array($value, $defaultSolrValues)) ? null : $value;
+                } else if (($key % 14) == 9) {
+                    $issNo = (in_array($value, $defaultSolrValues)) ? null : $value;
+                } else if (($key % 14) == 10) {
+                    $pgNos = (in_array($value, $defaultSolrValues)) ? null : $value;
+                } else if (($key % 14) == 11) {
                     $orderNo = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 13) == 11) {
+                } else if (($key % 14) == 12) {
                     $acNo = (in_array($value, $defaultSolrValues)) ? null : $value;
-                } else if (($key % 13) == 12) { // Thirteenth and last of 13 values
+                } else if (($key % 14) == 13) { // Fourteenth and last of 14 values
                     $id = (in_array($value, $defaultSolrValues)) ? null : $value;
 
                     // We have all values now, add them to the return array:
                     $result[] = ['title' => $title, 'subTitle' => $subTitle,
                         'partTitle' => $partTitle, 'edition' => $edition,
-                        'pubYear' => $pubYear, 'volNo245n' => $volNo245n,
-                        'relatedPart' => $relatedPart, 'enumeration' => $enumeration,
-                        'volNo830v' => $volNo830v, 'type' => $type,
+                        'pubYear' => $pubYear, 'relatedPart' => $relatedPart,
+                        'enumeration' => $enumeration, 'form' => $form,
+                        'volNo' => $volNo, 'issNo' => $issNo, 'pgNos' => $pgNos,
                         'orderNo' => $orderNo, 'acNo' => $acNo, 'id' => $id];
                 }
     		}
