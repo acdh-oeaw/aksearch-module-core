@@ -37,8 +37,9 @@ class Parts extends \VuFind\RecordTab\AbstractBase
 
         // Get child information and tweak it for better output in "parts" tab
         $childs = $this->getRecordDriver()->tryMethod('getChilds');
-        var_dump($childs);
+
         if ($childs) {
+            $childsByLevel = [];
             foreach ($childs as $child) {
                 // Construct title
                 $title = $child['partTitle'] ?? implode(
@@ -49,8 +50,10 @@ class Parts extends \VuFind\RecordTab\AbstractBase
                     )
                 );
                 $title = empty(trim($title)) ? 'NoTitle' : $title;
+                $level = $child['level'] ?? 'unknown';
 
-                $result[] = [
+                // Create an array grouped by level
+                $childsByLevel[$level][] = [
                     'id' => $child['id'],
                     'type' => $child['type'] ?? null,
                     'title' => $title,
@@ -63,24 +66,33 @@ class Parts extends \VuFind\RecordTab\AbstractBase
                 ];
             }
 
-            // Arrays for sorting
-            $pubYears = array_column($result, 'pubYear');
-            $volNos = array_column($result, 'volNo');
-            $issNos = array_column($result, 'issNo');
-            $orderNos = array_column($result, 'orderNo');
+            // Group each level-subarray
+            foreach ($childsByLevel as $level => $child) {
+                // Arrays for sorting
+                $pubYears = array_column($child, 'pubYear');
+                $volNos = array_column($child, 'volNo');
+                $issNos = array_column($child, 'issNo');
+                $orderNos = array_column($child, 'orderNo');
 
-            // Sort result array by multiple aspects
-            array_multisort (
-                $pubYears, SORT_DESC,
-                $volNos, SORT_DESC,
-                $issNos, SORT_DESC,
-                $orderNos, SORT_DESC,
-                $result
-            );
+                // Sort by multiple aspects
+                array_multisort (
+                    $pubYears, SORT_DESC,
+                    $volNos, SORT_DESC,
+                    $issNos, SORT_DESC,
+                    $orderNos, SORT_DESC,
+                    $child
+                );
+
+                // Add to result array
+                $result[$level] = $child;
+            }
         }
 
         return (empty($result)) ? null : $result;
     }
+
+
+    
 
     /**
      * AK: Callback function for array_filter function.
