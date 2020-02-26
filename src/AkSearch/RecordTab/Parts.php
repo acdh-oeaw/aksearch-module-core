@@ -62,7 +62,8 @@ class Parts extends \VuFind\RecordTab\AbstractBase
                     'volNo' => $child['volNo'] ?? null,
                     'issNo' => $child['issNo'] ?? null,
                     'pgNos' => $child['pgNos'] ?? null,
-                    'orderNo' => $child['orderNo'] ?? null
+                    'orderNo' => $child['orderNo'] ?? null,
+                    'fullTextUrl' => $child['fullTextUrl'] ?? null
                 ];
             }
 
