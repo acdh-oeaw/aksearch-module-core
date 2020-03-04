@@ -596,6 +596,16 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * AK: Check if the MarcXML record has parent records by checking if PNT tags
+     * exists.
+     *
+     * @return boolean  True if parent records exists, false otherwise
+     */
+    public function hasParents() {
+        return empty($this->getFieldArray('PNT')) ? false : true;
+    }
+
+    /**
      * AK: Check if the MarcXML record has child records by checking if CLD tags
      * exists.
      *
