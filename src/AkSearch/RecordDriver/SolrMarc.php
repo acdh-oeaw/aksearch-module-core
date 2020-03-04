@@ -60,6 +60,7 @@ class SolrMarc extends SolrDefault
         getCallNumbers as protected getCallNumbersFromXml;
         getAllSubjects as protected getAllSubjectsFromXml;
         hasChilds as protected hasChildsFromXml;
+        hasParents as protected hasParentsFromXml;
     }
 
     /**
@@ -241,7 +242,7 @@ class SolrMarc extends SolrDefault
      */
     public function getBibliographicLevel()
     {
-        $level = $this->fields['bibLevel_txtF'] ?? null;
+        $level = $this->fields['bibLevel_txtF_mv'] ?? null;
         if ($level == null) {
             $level = $this->getBibliographicLevelFromMarcXml();
         }
@@ -324,7 +325,6 @@ class SolrMarc extends SolrDefault
         $callNumbers = $this->getCallNumbers();
         return $callNumbers[0] ?? null;
     }
-
 
     /**
      * Get all possible contributors grouped by role in the right order.
@@ -419,7 +419,123 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * AK: Check if there are child records. Fallback to MarcXML if.
+     * AK: Check if there are parent records. Fallback to MarcXML.
+     *
+     * @return boolean True if parent records exists, false otherwise
+     */
+    public function hasParents() {
+        $hasParents = isset($this->fields['parents_txt_mv']);
+        if (!$hasParents) {
+            $hasParents = $this->hasParentsFromXml();
+        }
+        return $hasParents;
+    }
+
+    /**
+     * Get information of parent records as an array.
+     *
+     * @return array    An array with information of parent records or null.
+     */
+    public function getParents() {
+        $result = [];
+
+        $solr = $this->fields['parents_txt_mv'] ?? null;
+        if ($solr) {
+            $defaultSolrValues = ['NoRemainder', 'NoPartNo', 'NoPartName',
+                'NoOrderNo', 'NoForm', 'NoLevel', 'NoVolNo245', 'NoVolNo490',
+                'NoVolNo773', 'NoVolNo830', 'NoAc', 'NoId'];
+
+                foreach ($solr as $key => $value) {
+                    if (($key % 13) == 0) { // First of 13 values
+                        $title = (in_array($value, $defaultSolrValues)) ? null : $value;
+                    } else if (($key % 13) == 1) { // Second of 13 values
+                        $subTitle = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 2) { // Third of 13 values
+                        $partNo = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 3) {
+                        $partName = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 4) {
+                        $orderNo = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 5) {
+                        $form = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 6) {
+                        $level = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 7) {
+                        $volNo245 = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 8) {
+                        $volNo490 = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 9) {
+                        $volNo773 = (in_array($value, $defaultSolrValues))
+                            ? null
+                            : $value;
+                    } else if (($key % 13) == 10) {
+                        $volNo830 = (in_array($value, $defaultSolrValues)) ? null : $value;
+                    } else if (($key % 13) == 11) {
+                        $acNo = (in_array($value, $defaultSolrValues)) ? null : $value;
+                    } else if (($key % 13) == 12) { // Thirteenth and last of 13 values
+                        $id = (in_array($value, $defaultSolrValues)) ? null : $value;
+    
+                        // We have all values now, add them to the return array:
+                        $result[] = ['title' => $title, 'subTitle' => $subTitle,
+                            'partNo' => $partNo, 'partName' => $partName,
+                            'orderNo' => $orderNo, 'form' => $form,
+                            'level' => $level, 'volNo245' => $volNo245,
+                            'volNo490' => $volNo490, 'volNo773' => $volNo773,
+                            'volNo830' => $volNo830, 'acNo' => $acNo, 'id' => $id];
+                    }
+                }
+        }
+
+        return empty($result) ? null : $result;
+    }
+
+    /**
+     * Get parent records in consolidated format
+     *
+     * @return array|null An array of parent record information or null
+     */
+    public function getConsolidatedParents() {
+        $parentsCons = [];
+        $parentsRaw = $this->getParents();
+        if ($parentsRaw) {
+            foreach ($parentsRaw as $key => $parentRaw) {
+                // Consolidate volume numbers into one string
+                $volNo = $parentRaw['volNo830'] ?? $parentRaw['volNo773']
+                    ?? $parentRaw['volNo490'] ?? $parentRaw['volNo245'];
+                
+                // Join possible parts of title to one string
+                $title = implode(' : ', array_filter([$parentRaw['title'],
+                    $parentRaw['subTitle'], $parentRaw['partNo'],
+                    $parentRaw['partName']], array($this, 'filterCallback'))
+                );
+
+                // Add necessary information to return string
+                $parentsCons[$key]['id'] = $parentRaw['id'];
+                $parentsCons[$key]['title'] = $title;
+                $parentsCons[$key]['volNo'] = $volNo;
+            }
+        }
+        return empty($parentsCons) ? null : $parentsCons;
+    }
+
+    /**
+     * AK: Check if there are child records. Fallback to MarcXML.
      *
      * @return boolean True if child records exists, false otherwise
      */
@@ -514,4 +630,277 @@ class SolrMarc extends SolrDefault
         return empty($result) ? null : $result;
     }
 
+    /**
+     * Ged pulbication date(s) if there is not date span available.
+     *
+     * @return array    The publication date(s)
+     */
+    public function getPublicationDatesWithoutDateSpan() {
+        return(isset($this->fields['publishDate'])
+            && !isset($this->fields['dateSpan']))
+            ? $this->fields['publishDate']
+            : [];
+    }
+
+    /**
+     * Get publisher place and name in form "Place : Publisher Name". If only one of
+     * both values exists, the single value will be returned.
+     *
+     * @return String   The place and/or name of the publisher or null
+     */
+    public function getPulisherPlaceName() {
+        $retval = null;
+
+        $publishers = null;
+		if (!empty($arrPublishers = $this->getPublishers())) {
+			$publishers = join(', ', $arrPublishers);
+        }
+
+        $places = null;
+		if (!empty($arrPlaces = $this->getPublicationInfo())) {
+			$places = join(', ', $arrPlaces);
+        }
+
+        $retval = implode(' : ', array_filter(
+            [$places, $publishers],
+            array($this, 'filterCallback'))
+        );
+        
+        return $retval;
+    }
+
+    /**
+     * Get alternative title(s).
+     * 
+     * TODO: Fallback to MarcXML
+     * 
+     * @return array An array or null
+     */
+    public function getTitleAlt() {
+        return $this->fields['title_alt'] ?? null;
+    }
+
+    /**
+     * Get form(s).
+     * 
+     * @return array An array or null
+     */
+    public function getForms() {
+        return $this->fields['bibForm_txtF_mv'] ?? null;
+    }
+
+    /**
+     * Get content(s).
+     * 
+     * @return array An array or null
+     */
+    public function getContents() {
+        return $this->fields['bibContent_txtF_mv'] ?? null;
+    }
+
+    /**
+     * Get media types(s).
+     * 
+     * @return array An array or null
+     */
+    public function getMediaTypes() {
+        return $this->fields['bibMedia_txtF_mv'] ?? null;
+    }
+
+    /**
+     * Get media carrier(s).
+     * 
+     * @return array An array or null
+     */
+    public function getCarriers() {
+        return $this->fields['bibCarrier_txtF_mv'] ?? null;
+    }
+
+    /**
+     * Get supplement issue(s).
+     * 
+     * @return array An array or null
+     */
+    public function getSupplements() {
+        return $this->getRelations('supplIssue_txt_mv', true);
+    }
+
+    /**
+     * Get supplement parent(s).
+     * 
+     * @return array An array or null
+     */
+    public function getSupplementParents() {
+        return $this->getRelations('supplParent_txt_mv', true);
+    }
+
+    /**
+     * Get other edition(s).
+     * 
+     * @return array An array or null
+     */
+    public function getOtherEditions() {
+        return $this->getRelations('otherEdition_txt_mv', true);
+    }
+
+    /**
+     * Get other physical form(s).
+     * 
+     * @return array An array or null
+     */
+    public function getOtherPhysForms() {
+        return $this->getRelations('additionalPhysForm_txt_mv', true);
+    }
+
+    /**
+     * Get "issued with" item(s).
+     * 
+     * @return array An array or null
+     */
+    public function getIssuedWith() {
+        return $this->getRelations('issuedWith_txt_mv');
+    }
+
+    /**
+     * Get preceding title(s).
+     * 
+     * @return array An array or null
+     */
+    public function getPrecedings() {
+        return $this->getRelations('preceding_txt_mv');
+    }
+
+    /**
+     * Get succeeding title(s).
+     * 
+     * @return array An array or null
+     */
+    public function getSucceedings() {
+        return $this->getRelations('succeeding_txt_mv');
+    }
+
+    /**
+     * Get other relation(s).
+     * 
+     * @return array An array or null
+     */
+    public function getOtherRelations() {
+        return $this->getRelations('otherRelation_txt_mv', true);
+    }
+
+    /**
+     * Generic function for getting relations.
+     * 
+     * TODO: If a fallback to MarcXML is possible, implement it.
+     * 
+     * @return array An array or null
+     */
+    public function getRelations($solrField, $prefix = false) {
+        $result = [];
+
+        $solr = $this->fields[$solrField] ?? null;
+
+        if ($solr) {
+
+            $defaultSolrValues = ['NoMainEnt', 'NoEd', 'NoPubData', 'NoRelPart',
+                'NoPhysDesc', 'NoRelInfo', 'NoSerData', 'NoNote', 'NoCtrlNo',
+                'NoIssn', 'NoIsbn', 'NoId'];
+
+            foreach ($solr as $key => $value) {
+    			if (($key % 13) == 0) { // First of 13 values
+                    $title = (in_array($value, $defaultSolrValues)) ? null : $value;
+    			} else if (($key % 13) == 1) { // Second of 13 values
+    				$mainEntry = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+    			} else if (($key % 13) == 2) { // Third of 13 values
+    				$edition = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+    			} else if (($key % 13) == 3) {
+                    $pubData = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+                } else if (($key % 13) == 4) {
+                    $relPart = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+                } else if (($key % 13) == 5) {
+                    $physDesc = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+                } else if (($key % 13) == 6) {
+                    $relInfo = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+                } else if (($key % 13) == 7) {
+                    $serData = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+                } else if (($key % 13) == 8) {
+                    $note = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+                } else if (($key % 13) == 9) {
+                    $ctrlNo = (in_array($value, $defaultSolrValues))
+                        ? null
+                        : $value;
+                } else if (($key % 13) == 10) {
+                    $issn = (in_array($value, $defaultSolrValues)) ? null : $value;
+                } else if (($key % 13) == 11) {
+                    $isbn = (in_array($value, $defaultSolrValues)) ? null : $value;
+                } else if (($key % 13) == 12) { // Thirteenth and last of 13 values
+                    $id = (in_array($value, $defaultSolrValues)) ? null : $value;
+
+                    // We have all values now, add them to the return array:
+                    $result[] = ['title' => $title, 'mainEntry' => $mainEntry,
+                        'edition' => $edition, 'pubData' => $pubData,
+                        'relPart' => $relPart, 'physDesc' => $physDesc,
+                        'relInfo' => $relInfo, 'serData' => $serData,
+                        'note' => $note, 'ctrlNo' => $ctrlNo, 'issn' => $issn,
+                        'isbn' => $isbn, 'id' => $id, 'prefix' => $prefix];
+                }
+    		}
+        }
+
+        return empty($result) ? null : $result;
+    }
+
+    /**
+     * Get local dewey number(s)
+     * 
+     * TODO: Fallback to MarcXML
+     * 
+     * @return array An array or null
+     */
+    public function getLocalDewey() {
+        return $this->fields['deweyAk_txt_mv'] ?? null;
+    }
+
+    /**
+     * Get raw dewey number(s)
+     * 
+     * TODO: Fallback to MarcXML
+     * 
+     * @return array An array or null
+     */
+    public function getRawDewey() {
+        return $this->fields['dewey-raw'] ?? null;
+    }
+
+    /**
+     * Get all unique dewey number(s)
+     * 
+     * @return array An array with unique dewey numbers or null
+     */
+    public function getAllDeweys() {
+        $allDeweys = array_unique(
+            array_merge(
+                $this->getLocalDewey() ?? [],
+                $this->getRawDewey() ?? []
+            )
+        );
+        return empty($allDeweys) ? null : $allDeweys;
+    }
+    
 }
