@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -41,55 +41,76 @@ namespace AkSearch\View\Helper\Root;
 class RecordDataFormatterFactory
     extends \VuFind\View\Helper\Root\RecordDataFormatterFactory
 {
+
     /**
      * Get default specifications for displaying data in collection-info metadata.
      * 
-     * AK: Added config "stackCells" for stacking table cells on top of each other
-     * if configured. Long table contents need less space that way. Also tweaked the
-     * display of the language of the record.
+     * AK: Added config "stackCells" for stacking table cells on top of each other if
+     * configured. Long table contents need less space that way.
+     * Added and/or removed and/or tweaked the information that should be displayed
+     * in the core record view.
      *
      * @return array
      */
-    public function getDefaultCollectionInfoSpecs()
-    {
+    public function getDefaultCollectionInfoSpecs() {
         $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
+        
         // AK: Getting authors by role
         $spec->setMultiLine(
             'Authors', 'getContributorsByRole', $this->getAuthorFunction()
         );
+
         $spec->setLine('Summary', 'getSummary');
+
+        // AK: Removed format
+        // TODO: Do we need the format here?
+        /*
         $spec->setLine(
             'Format', 'getFormats', 'RecordHelper',
             ['helperMethod' => 'getFormatList']
         );
+        */
 
-        // AK: Commented out default display of the language of the record as this
+        // AK: Use custom functions for getting publisher and publication place
+        $spec->setLine('PlacePublisher', 'getPulisherPlaceName');
+
+        // AK: Use custom function for getting year of publication. This does get
+        // year of publication only if there is no date span available (see below).
+        // This is to avoid duplicates.
+        $spec->setLine('Year of Publication', 'getPublicationDatesWithoutDateSpan');
+
+        // AK: Get the date span. This is e. g. important for journals or serial
+        // publications (e. g. "published from 1960 to 2011"). If we have a date
+        // span, no 'Year of Publication' (see above) will be displayed to avoid
+        // duplicates.
+        $spec->setLine('dateSpan', 'getDateSpan');
+
+        $spec->setLine(
+            'Edition', 'getEdition', null,
+            ['prefix' => '<span property="bookEdition">', 'suffix' => '</span>']
+        );
+
+        // AK: Removed the default display of the language of the record as this
         // does not translate the language name. Now using more arguments in
         // "setLine" method for translating the language name(s) in the records
         // "core" view (= detail view of a record). See also pull request 413 at
         // VuFind GitHub and there especially the "Files changed" section to get an
         // example of the code used here:
         // https://github.com/vufind-org/vufind/pull/413
-        // ORIGINAL: $spec->setLine('Language', 'getLanguages');
         $spec->setLine(
             'Language', 'getLanguages', null,
             ['translate' => true, 'translationTextDomain' => 'Languages::']
         );
 
-        $spec->setTemplateLine(
-            'Published', 'getPublicationDetails', 'data-publicationDetails.phtml'
-        );
-        $spec->setLine(
-            'Edition', 'getEdition', null,
-            ['prefix' => '<span property="bookEdition">', 'suffix' => '</span>']
-        );
         $spec->setTemplateLine('Series', 'getSeries', 'data-series.phtml');
 
-        // AK: Added array with key "stackCells" to "context" array.
+        // AK: Added array with key "stackCells" to "context" array. Using the new
+        // option "stackCells" allows for saving some display space.
         $spec->setTemplateLine(
             'Subjects', 'getAllSubjectHeadings', 'data-allSubjectHeadings.phtml',
             ['context' => ['stackCells' => true]]
         );
+
         $spec->setTemplateLine('Online Access', true, 'data-onlineAccess.phtml');
         $spec->setTemplateLine(
             'Related Items', 'getAllRecordLinks', 'data-allRecordLinks.phtml'
@@ -98,67 +119,116 @@ class RecordDataFormatterFactory
         $spec->setLine('Production Credits', 'getProductionCredits');
         $spec->setLine('ISBN', 'getISBNs');
         $spec->setLine('ISSN', 'getISSNs');
+
         return $spec->getArray();
     }
-
 
     /**
      * Get default specifications for displaying data in core metadata.
      *
-     * AK: Added config "stackCells" for stacking table cells on top of each other
-     *     if configured. Long table contents need less space that way.
-     *     Also tweaked the display of the language of the record.
+     * AK: Added config "stackCells" for stacking table cells on top of each other if
+     * configured. Long table contents need less space that way.
+     * Added and/or removed and/or tweaked the information that should be displayed
+     * in the core record view.
      * 
      * @return array
      */
-    public function getDefaultCoreSpecs()
-    {
+    public function getDefaultCoreSpecs() {
         $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
+
+        // AK: Getting parent records with direct link to the parent records detail
+        // page.
         $spec->setTemplateLine(
-            'Published in', 'getContainerTitle', 'data-containerTitle.phtml'
+            'Published in', 'getConsolidatedParents', 'data-containerTitle.phtml'
         );
-        $spec->setLine(
-            'New Title', 'getNewerTitles', null, ['recordLink' => 'title']
-        );
-        $spec->setLine(
-            'Previous Title', 'getPreviousTitles', null, ['recordLink' => 'title']
-        );
+
         // AK: Getting authors by role
         $spec->setMultiLine(
             'Authors', 'getContributorsByRole', $this->getAuthorFunction()
         );
+        
+        // AK: Removed format
+        // TODO: Do we need the format here?
+        /*
         $spec->setLine(
             'Format', 'getFormats', 'RecordHelper',
             ['helperMethod' => 'getFormatList']
         );
+        */
 
-        // AK: Commented out default display of the language of the record as this
+        // AK: Use custom functions for getting publisher and publication place
+        $spec->setLine('PlacePublisher', 'getPulisherPlaceName');
+
+        // AK: Use custom function for getting year of publication. This does get
+        // year of publication only if there is no date span available (see below).
+        // This is to avoid duplicates.
+        $spec->setLine('Year of Publication', 'getPublicationDatesWithoutDateSpan');
+
+        // AK: Get the date span. This is e. g. important for journals or serial
+        // publications (e. g. "published from 1960 to 2011"). If we have a date
+        // span, no 'Year of Publication' (see above) will be displayed to avoid
+        // duplicates.
+        $spec->setLine('dateSpan', 'getDateSpan');
+
+        $spec->setLine(
+            'Edition', 'getEdition', null,
+            ['prefix' => '<span property="bookEdition">', 'suffix' => '</span>']
+        );
+
+        // AK: Removed the default display of the language of the record as this
         // does not translate the language name. Now using more arguments in
         // "setLine" method for translating the language name(s) in the records
         // "core" view (= detail view of a record). See also pull request 413 at
         // VuFind GitHub and there especially the "Files changed" section to get an
         // example of the code used here:
         // https://github.com/vufind-org/vufind/pull/413
-        // ORIGINAL: $spec->setLine('Language', 'getLanguages');
         $spec->setLine(
             'Language', 'getLanguages', null,
             ['translate' => true, 'translationTextDomain' => 'Languages::']
         );
 
+        // AK: Get preceding titles
         $spec->setTemplateLine(
-            'Published', 'getPublicationDetails', 'data-publicationDetails.phtml'
+            'Precedings', 'getPrecedings', 'data-relations.phtml'
         );
-        $spec->setLine(
-            'Edition', 'getEdition', null,
-            ['prefix' => '<span property="bookEdition">', 'suffix' => '</span>']
+
+        // AK: Get succeeding titles
+        $spec->setTemplateLine(
+            'Succeedings', 'getSucceedings', 'data-relations.phtml'
         );
+
+        // AK: Get other editions
+        $spec->setTemplateLine(
+            'OtherEditions', 'getOtherEditions', 'data-relations.phtml'
+        );
+
+        // AK: Get other physical forms
+        $spec->setTemplateLine(
+            'OtherPhysForms', 'getOtherPhysForms', 'data-relations.phtml'
+        );
+
+        // AK: Get "issued with" information
+        $spec->setTemplateLine(
+            'IssuedWith', 'getIssuedWith', 'data-relations.phtml'
+        );
+
+        // AK: Get other relations
+        $spec->setTemplateLine(
+            'OtherRelations', 'getOtherRelations', 'data-relations.phtml'
+        );
+
         $spec->setTemplateLine('Series', 'getSeries', 'data-series.phtml');
 
-        // AK: Added array with key "stackCells" to "context" array.
+        // AK: Added array with key "stackCells" to "context" array. Using the new
+        // option "stackCells" allows for saving some display space.
         $spec->setTemplateLine(
             'Subjects', 'getAllSubjectHeadings', 'data-allSubjectHeadings.phtml',
             ['context' => ['stackCells' => true]]
         );
+
+        // AK: Get dewey classification
+        $spec->setTemplateLine('Classification', 'getAllDeweys', 'data-localDewey');
+
         $spec->setTemplateLine(
             'child_records', 'getChildRecordCount', 'data-childRecords.phtml',
             ['allowZero' => false]
@@ -168,6 +238,7 @@ class RecordDataFormatterFactory
             'Related Items', 'getAllRecordLinks', 'data-allRecordLinks.phtml'
         );
         $spec->setTemplateLine('Tags', true, 'data-tags.phtml');
+        
         return $spec->getArray();
     }
 
@@ -215,6 +286,47 @@ class RecordDataFormatterFactory
             }
             return $result;
         };
+    }
+
+    /**
+     * Get default specifications for displaying data in the description tab.
+     *
+     * @return array
+     */
+    public function getDefaultDescriptionSpecs()
+    {
+        $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
+        $spec->setLine('TitleAlt', 'getTitleAlt');
+        $spec->setTemplateLine('Summary', true, 'data-summary.phtml');
+        $spec->setLine('Item Description', 'getGeneralNotes');
+        $spec->setLine('Physical Description', 'getPhysicalDescriptions');
+        $spec->setLine('Publication Frequency', 'getPublicationFrequency');
+        $spec->setLine('Playing Time', 'getPlayingTimes');
+        $spec->setLine('Format', 'getSystemDetails');
+        $spec->setLine('Audience', 'getTargetAudienceNotes');
+        $spec->setLine('Awards', 'getAwards');
+        $spec->setLine('Production Credits', 'getProductionCredits');
+        $spec->setLine('Bibliography', 'getBibliographyNotes');
+        $spec->setLine('ISBN', 'getISBNs');
+        $spec->setLine('ISSN', 'getISSNs');
+        $spec->setLine('DOI', 'getCleanDOI');
+        $spec->setLine('Related Items', 'getRelationshipNotes');
+        $spec->setLine('Access', 'getAccessRestrictions');
+        $spec->setLine('Finding Aid', 'getFindingAids');
+        $spec->setLine('Publication_Place', 'getHierarchicalPlaceNames');
+
+        $spec->setLine('Level', 'getBibliographicLevel', null,
+            ['translate' => true]);
+        $spec->setLine('Form', 'getForms', null, ['translate' => true]);
+        $spec->setLine('Contents', 'getContents', null, ['translate' => true]);
+        $spec->setLine('MediaTypes', 'getMediaTypes', null, ['translate' => true]);
+        $spec->setLine('Carrier', 'getCarriers', null, ['translate' => true]);
+        $spec->setLine('Supplements', 'getSupplements');
+        $spec->setLine('SupplementParents', 'getSupplementParents');
+        
+        $spec->setTemplateLine('Author Notes', true, 'data-authorNotes.phtml');
+        
+        return $spec->getArray();
     }
 
 }
