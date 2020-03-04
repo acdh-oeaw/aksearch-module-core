@@ -91,10 +91,18 @@ $config = [
             ],
             'recordtab' => [
                 'factories' => [
-                    'AkSearch\RecordTab\Parts' => '\Zend\ServiceManager\Factory\InvokableFactory'
+                    'AkSearch\RecordTab\Description' => '\Zend\ServiceManager\Factory\InvokableFactory',
+                    'AkSearch\RecordTab\HoldingsILS' => 'VuFind\RecordTab\HoldingsILSFactory',
+                    'AkSearch\RecordTab\Parts' => '\Zend\ServiceManager\Factory\InvokableFactory',
+                    'AkSearch\RecordTab\StaffViewArray' => '\Zend\ServiceManager\Factory\InvokableFactory',
+                    'AkSearch\RecordTab\StaffViewMARC' => '\Zend\ServiceManager\Factory\InvokableFactory'
                 ],
                 'aliases' => [
-                    'parts' => 'AkSearch\RecordTab\Parts'
+                    'description' => 'AkSearch\RecordTab\Description',
+                    'holdingsils' => 'AkSearch\RecordTab\HoldingsILS',
+                    'parts' => 'AkSearch\RecordTab\Parts',
+                    'staffviewarray' => 'AkSearch\RecordTab\StaffViewArray',
+                    'staffviewmarc' => 'AkSearch\RecordTab\StaffViewMARC'
                 ]
             ],
             'search_backend' => [
