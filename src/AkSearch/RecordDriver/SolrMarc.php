@@ -242,7 +242,7 @@ class SolrMarc extends SolrDefault
      */
     public function getBibliographicLevel()
     {
-        $level = $this->fields['bibLevel_txtF_mv'] ?? null;
+        $level = $this->fields['bibLevel_txtF'] ?? null;
         if ($level == null) {
             $level = $this->getBibliographicLevelFromMarcXml();
         }
