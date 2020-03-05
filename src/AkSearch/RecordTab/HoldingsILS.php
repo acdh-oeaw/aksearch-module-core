@@ -56,4 +56,13 @@ class HoldingsILS extends \VuFind\RecordTab\HoldingsILS {
         return $this->getRecordDriver()->tryMethod('getConsolidatedParents');
     }
 
+    /**
+     * AK: Check if this record has child records
+     *
+     * @return bool
+     */
+    public function hasChilds() {
+        return $this->getRecordDriver()->tryMethod('hasChilds');
+    }
+
 }
