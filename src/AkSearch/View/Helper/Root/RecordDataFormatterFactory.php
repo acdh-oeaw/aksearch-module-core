@@ -318,7 +318,7 @@ class RecordDataFormatterFactory
         $spec->setLine('Level', 'getBibliographicLevel', null,
             ['translate' => true]);
         $spec->setLine('Form', 'getForms', null, ['translate' => true]);
-        $spec->setLine('Contents', 'getContents', null, ['translate' => true]);
+        $spec->setLine('Content', 'getContents', null, ['translate' => true]);
         $spec->setLine('MediaTypes', 'getMediaTypes', null, ['translate' => true]);
         $spec->setLine('Carrier', 'getCarriers', null, ['translate' => true]);
         $spec->setLine('Supplements', 'getSupplements');
