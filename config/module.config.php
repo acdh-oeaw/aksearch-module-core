@@ -31,12 +31,17 @@ $config = [
         ],
     ],
     'service_manager' => [
+        'allow_override' => true,
         'factories' => [
             'AkSearch\Auth\Manager' => 'VuFind\Auth\ManagerFactory',
+            'AkSearch\ILS\Connection' => 'VuFind\ILS\ConnectionFactory',
+            'AkSearch\ILS\Logic\Holds' => 'VuFind\ILS\Logic\LogicFactory',
             'AkSearch\Mailer\Mailer' => 'VuFind\Mailer\Factory'
         ],
         'aliases' => [
             'VuFind\Auth\Manager' => 'AkSearch\Auth\Manager',
+            'VuFind\ILS\Connection' => 'AkSearch\ILS\Connection',
+            'VuFind\ILS\HoldLogic' => 'AkSearch\ILS\Logic\Holds',
             'VuFind\Mailer' => 'AkSearch\Mailer\Mailer'
         ],
     ],
@@ -85,7 +90,7 @@ $config = [
                 ],
                 'delegators' => [
                     'AkSearch\RecordDriver\SolrMarc' => [
-                        'VuFind\RecordDriver\IlsAwareDelegatorFactory'
+                        'AkSearch\RecordDriver\IlsAwareDelegatorFactory'
                     ]
                 ]
             ],
