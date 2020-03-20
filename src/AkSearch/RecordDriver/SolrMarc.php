@@ -61,6 +61,7 @@ class SolrMarc extends SolrDefault
         getAllSubjects as protected getAllSubjectsFromXml;
         hasChilds as protected hasChildsFromXml;
         hasParents as protected hasParentsFromXml;
+        getSummarizedHoldings as protected getSummarizedHoldingsFromXml;
     }
 
     /**
@@ -901,6 +902,76 @@ class SolrMarc extends SolrDefault
             )
         );
         return empty($allDeweys) ? null : $allDeweys;
+    }
+
+    /**
+     * Get summarized holdings. First we try to find them in our index data in the
+     * "fullrecord" field which holds the whole MarcXML data. If no HOL fields were
+     * found there, we fall back to the ILS API to find the data.
+     *
+     * @return array An array with summarized holding data or an empty array
+     */
+    public function getSummarizedHoldings()
+    {
+        // Initialize result variable
+        $sumHoldings = [];
+
+        // Get summarized holdings from XML
+        $sumHolsFromXml = $this->getSummarizedHoldingsFromXml();
+
+        // If we have an array (even an empty one), we can be sure that HOL fields
+        // were found in our data and that we can possibly get summarized holdings.
+        // Having HOL files in the record does not necessarily mean that they contain
+        // summarized holdings, so the array could be empty and that would be OK.
+        if (is_array($sumHolsFromXml)) {
+            // Convert the holdings we got from the MarcXML in our index data to
+            // holdings that resemble the default holdings we get from the ILS
+            // driver This also hides holdings from the hide_holdings[] setting in
+            // config.ini.
+            // Info: Method "summarizedDriverHoldings()" of holdLogic is injected
+            // through \AkSearch\RecordDriver\IlsAwareDelegatorFactory
+            $sumHolsFromXmlDriverLayout = $this->holdLogic->summarizedDriverHoldings(
+                ['summarizedHoldings' => $sumHolsFromXml]
+            );
+
+            // Format holdings for use in the holdings tab.
+            // Info: Method "formatSummarizedHoldings()" of holdLogic is injected
+            // through \AkSearch\RecordDriver\IlsAwareDelegatorFactory
+            $sumHoldings = $this->holdLogic->formatSummarizedHoldings(
+                $sumHolsFromXmlDriverLayout
+            );
+        } else if ($sumHolsFromXml == null) {
+            // If the result from XML is null it means that we have no HOL fields in
+            // the current record. As a fallback measure, we call the ILS API to see
+            // if we can get summarized holdings.
+            $id = $this->getUniqueID();
+            if ($this->ils->checkCapability('getSummarizedHoldings', $id)) {
+                // Get summarized holdings from ILS
+                if (!empty($sumHolsFromIls = $this->ils->getSummarizedHoldings($id)))
+                {
+                    // Convert the holdings we got from the ILS to holdings that
+                    // resemble the default holdings we get from the ILS driver This
+                    // also hides holdings from the hide_holdings[] setting in
+                    // config.ini.
+                    // Info: Method "summarizedDriverHoldings()" of holdLogic is
+                    // injected through
+                    // \AkSearch\RecordDriver\IlsAwareDelegatorFactory
+                    $sumHolsFromIlsDriverLayout = $this->holdLogic
+                        ->summarizedDriverHoldings(['summarizedHoldings' =>
+                        $sumHolsFromIls]);
+
+                    // Format holdings for use in the holdings tab.
+                    // Info: Method "formatSummarizedHoldings()" of holdLogic is
+                    // injected through
+                    // \AkSearch\RecordDriver\IlsAwareDelegatorFactory
+                    $sumHoldings = $this->holdLogic->formatSummarizedHoldings(
+                        $sumHolsFromIlsDriverLayout
+                    );
+                }
+            }
+        }
+
+        return $sumHoldings;
     }
     
 }

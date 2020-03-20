@@ -65,4 +65,13 @@ class HoldingsILS extends \VuFind\RecordTab\HoldingsILS {
         return $this->getRecordDriver()->tryMethod('hasChilds');
     }
 
+    /**
+     * AK: Get summarized holdings.
+     *
+     * @return void
+     */
+    public function getSummarizedHoldings() {
+        return $this->getRecordDriver()->tryMethod('getSummarizedHoldings');
+    }
+
 }

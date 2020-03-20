@@ -1,11 +1,10 @@
 <?php
-
 /**
- * AK: Extends Alma ILS Driver
+ * AK: Extend Alma ILS Driver
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -49,6 +48,466 @@ implements
     use AlmaTrait;
     use \VuFind\Db\Table\DbTableAwareTrait;
     use \VuFind\I18n\Translator\TranslatorAwareTrait;
+
+
+    /**
+     * Get Holding
+     *
+     * This is responsible for retrieving the holding information of a certain
+     * record.
+     *
+     * @param string $id      The record id to retrieve the holdings for
+     * @param array  $patron  Patron data
+     * @param array  $options Additional options
+     *
+     * @return array On success an array with the key "total" containing the total
+     * number of items for the given bib id, and the key "holdings" containing an
+     * array of holding information each one with these keys: id, source,
+     * availability, status, location, reserve, callnumber, duedate, returnDate,
+     * number, barcode, item_notes, item_id, holding_id, addLink, description
+     */
+    public function getHolding($id, $patron = null, array $options = [])
+    {
+        // Prepare result array with default values. If no API result can be received
+        // these will be returned.
+        $results['total'] = 0;
+        $results['holdings'] = [];
+
+        // Correct copy count in case of paging
+        $copyCount = $options['offset'] ?? 0;
+
+        // Paging parameters for paginated API call. The "limit" tells the API how
+        // many items the call should return at once (e. g. 10). The "offset" defines
+        // the range (e. g. get items 30 to 40). With these parameters we are able to
+        // use a paginator for paging through many items.
+        $apiPagingParams = '';
+        if ($options['itemLimit'] ?? null) {
+            $apiPagingParams = 'limit=' . urlencode($options['itemLimit'])
+                . '&offset=' . urlencode($options['offset'] ?? 0);
+        }
+
+        // The path for the API call. We call "ALL" available items, but not at once
+        // as a pagination mechanism is used. If paging params are not set for some
+        // reason, the first 10 items are called which is the default API behaviour.
+        $itemsPath = '/bibs/' . urlencode($id) . '/holdings/ALL/items?'
+            . $apiPagingParams
+            . '&order_by=library,location,enum_a,enum_b'
+            . '&direction=desc'
+            . '&expand=due_date_policy,due_date';
+
+        if ($items = $this->makeRequest($itemsPath)) {
+            // Get the total number of items returned from the API call and set it to
+            // a class variable. It is then used in VuFind\RecordTab\HoldingsILS for
+            // the items paginator.
+            $results['total'] = (int)$items->attributes()->total_record_count;
+
+            // Get texts for fulfillment units from Alma config
+            $fulUnitTexts = $this->config['Holds']['fulfillment_unit_text'] ?? null;
+            
+            // Get texts for locations from Alma config
+            $locTexts = $this->config['Holds']['location_text'] ?? null;
+
+            foreach ($items->item as $item) {
+
+                // Get location data
+                $library = (string)$item->item_data->library ?: null;
+                $location = (string)$item->item_data->location ?: null;
+                $locData = $this->getLocationData($library, $location);
+
+                // Check if this location is suppressed from Alma. See the setting
+                // "Suppress from Discovery" in the config for "Physical Locations"
+                // in Alma.
+                $show = !$locData['suppress_from_publishing'] ?? true;
+
+                if ($show) {
+                    $fulUnit = $locData['fulfillment_unit'] ?: null;
+                    $locationText = $locTexts[$location] ?? $fulUnitTexts[$fulUnit]
+                        ?? null;
+    
+                    $number = ++$copyCount;
+                    $holdingId = (string)$item->holding_data->holding_id;
+                    $itemId = (string)$item->item_data->pid;
+                    //$processType = (string)$item->item_data->process_type;
+                    $barcode = (string)$item->item_data->barcode;
+                    $requested = ((string)$item->item_data->requested == 'false')
+                        ? false
+                        : true;
+                    $duedate = ($date = (string)$item->item_data->due_date)
+                        ? $this->parseDate($date)
+                        : null;
+
+    
+                    // Get the number of requests
+                    $noOfRequests = 0;
+                    if ($requested) {
+                        $requestPath = '/bibs/' . urlencode($id) . '/holdings/'
+                            . urlencode($holdingId) . '/items/'
+                            . urlencode($itemId) . '/requests';
+                        $requestData = $this->makeRequest($requestPath);
+                        $noOfRequests = (int)$requestData
+                            ->attributes()['total_record_count'] ?: 0;
+                    }
+    
+                    // Check if the item is to be recalled
+                    $isRecall = false;
+                    if ($duedate || $requested) {
+                        $isRecall = true;
+                    }
+    
+                    if ($item->item_data->public_note != null
+                        && !empty($item->item_data->public_note)
+                    ) {
+                        $itemNotes = [(string)$item->item_data->public_note];
+                    }
+    
+                    if ($item->item_data->description != null
+                        && !empty($item->item_data->description)
+                    ) {
+                        $number = (string)$item->item_data->description;
+                        $description = (string)$item->item_data->description;
+                    }
+    
+                    $results['holdings'][] = [
+                        'id' => $id,
+                        'source' => 'Solr',
+                        'availability' => $this->getAvailabilityFromItem($item),
+                        'status' => (string)$item->item_data->base_status[0]
+                            ->attributes()['desc'] ?: null,
+                        // The key 'location' must contain the location code as this is
+                        // used for configs in Alma.ini, e. g. "location_text" and
+                        // "fulfillment_unit_text"
+                        'location' => $location,
+                        'reserve' => 'N',
+                        'callnumber' => (string)$item->holding_data->call_number ?: null,
+                        'callnumber_alt' => (string)$item->item_data
+                            ->alternative_call_number ?: null,
+                        'callnumber_tmp' => (string)$item->item_data
+                            ->temp_call_number ?: null,
+                        'duedate' => $duedate,
+                        'returnDate' => false,
+                        'requests_placed' => $noOfRequests,
+                        'number' => $number,
+                        'barcode' => $barcode ?: 'n/a',
+                        'item_notes' => $itemNotes ?? null,
+                        'item_id' => $itemId,
+                        'holding_id' => $holdingId,
+                        'holdtype' => 'hold',
+                        'addLink' => $patron
+                            ? (($locationText) ? false : 'check')
+                            : false,
+                        // For Alma title-level hold requests
+                        'description' => $description ?? null,
+                        // AK: Adding additional information
+                        'library' => $library ?? null,
+                        'policy_code' => (string)$item->item_data->policy ?: null,
+                        'policy_desc' => (string)$item->item_data->policy
+                            ->attributes()['desc'] ?: null,
+                        'isRecall' => $isRecall ?? null,
+                        'fulfillment_unit' => $locData['fulfillment_unit'] ?: null,
+                        'location_external_name' => $locData['external_name']
+                            ?: $location
+                            ?: null,
+                        'locationtext' => $locationText
+                    ];
+                }
+            }
+
+        }
+        return $results;
+    }
+
+    /**
+     * Get data for all locations of a library or for a single location. The location
+     * data are cached with a lifetime of 3600 seconds. After saving the data to the
+     * cache the cache lifetime is reset to the saved default value.
+     *
+     * @param string $library   The code of a library in Alma
+     * @param string $location  The code of a location in Alma (optional)
+     * 
+     * @return array An array with data of all locations of a given library (if
+     *               $location is not set) or the data of a single location. An empty
+     *               array if no results were found.
+     */
+    public function getLocationData($library, $location = null) {
+        $libCacheKey = $library.'_Locations';
+        $savedCacheLifetime = $this->cacheLifetime;
+        $this->cacheLifetime = 3600;
+        $locations = $this->getCachedData($libCacheKey);
+        $this->cacheLifetime = $savedCacheLifetime;
+
+        if ($locations === null && !empty($library)) {
+            $locations = [];
+
+            // Get all locations for the given library
+            $locationsForLib = $this->makeRequest(
+                '/conf/libraries/'.urlencode($library).'/locations'
+            );
+
+            foreach($locationsForLib->location as $loc) {
+                $locations[(string)$loc->code] = [
+                    'name' => (string)$loc->name ?? null,
+                    'external_name' => (string)$loc->external_name ?? null,
+                    'type' => (string)$loc->type ?? null,
+                    'suppress_from_publishing' =>
+                        ((string)$loc->suppress_from_publishing == 'false')
+                        ? false
+                        : true,
+                    'fulfillment_unit' => (string)$loc->fulfillment_unit ?? null
+                ];
+            }
+            
+            // Write the data to the cache
+            $this->putCachedData($libCacheKey, $locations);
+        }
+
+        return (empty($location)) ? $locations ?? [] : $locations[$location] ?? [];
+    }
+
+    /**
+     * Get summarized holdings and add it to the holdings array that is returned from
+     * the default Alma ILS driver. This is quite specific to Austrian libraries.
+     * See below for information on used MARC fields
+     * 
+     * TODO:
+     *  - Less nesting in code below.
+     *  - Fields 852b and 852c are not repeated in Austrian libraries, but we should
+     *    consider the fact that these fields are repeatable according to the
+     *    official Marc21 documentation.
+     *  
+     * Marc holding field 852
+     * See https://wiki.obvsg.at/Katalogisierungshandbuch/KategorienuebersichtB852FE
+     * - Library Code:      tag=852 ind1=8 ind2=1|# subfield=b
+     * - Location:          tag=852 ind1=8 ind2=1|# subfield=c
+     * - Call No.:          tag=852 ind1=8 ind2=1|# subfield=h
+     * - Note on call no.:  tag=852 ind1=8 ind2=1|# subfield=z
+     * 
+     * Marc holding field 866
+     * See https://wiki.obvsg.at/Katalogisierungshandbuch/KategorienuebersichtB866FE
+     * - Summarized holdings:   tag=866 ind1=3 ind2=0 subfield=a
+     * - Gaps:                  tag=866 ind1=3 ind2=0 subfield=z
+     * - Prefix text for summarized holdings:
+     *                          tag=866 ind1=# ind2=0 subfield=a
+     * - Note for summarized holdings:
+     *                          tag=866 ind1=# ind2=0 subfield=z
+     * 
+     * @param [type] $id
+     * @param [type] $patron
+     * @param array $options
+     * @return array
+     */
+    public function getSummarizedHoldings($id)
+    {
+        // Initialize variables
+        $summarizedHoldings = [];
+
+        // Path to Alma holdings API
+        $holdingsPath = '/bibs/' . urlencode($id) . '/holdings';
+
+        // Get holdings from Alma API
+        if ($almaApiResult = $this->makeRequest($holdingsPath)) {
+            // Get the holding details from the API result
+            $almaHols = $almaApiResult->holding ?? null;
+            
+            // Check if the holding details object is emtpy
+            if (!empty($almaHols)) {
+                foreach ($almaHols as $almaHol) {
+                    // Get the holding IDs
+                    $holId = (string)$almaHol->holding_id;
+
+                    // Get the single MARC holding record based on the holding ID
+                    if ($marcHol = $this->makeRequest($holdingsPath.'/'.$holId)) {
+                        if ($marcHol != null && !empty($marcHol)) {
+                            if (isset($marcHol->record)) {
+                                // Get the holdings record from the API as a
+                                // File_MARCXML object for better processing below.
+                                $marc = new \File_MARCXML(
+                                    $marcHol->record->asXML(),
+                                    \File_MARCXML::SOURCE_STRING
+                                );
+
+                                // Read the Marc holdings record
+                                if ($marcRec = $marc->next()) {
+
+                                    // Get values only if we have an 866 field.
+                                    if ($fs866 = $marcRec->getFields('866')) {
+                                        $libCodes = null;
+                                        $locCodes = null;
+                                        $callNo = null;
+                                        $callNoNote = null;
+                                        $sumHoldings = null;
+                                        $gaps = null;
+                                        $sumHoldingsPrefix = null;
+                                        $sumHoldingsNote = null;
+                                        
+                                        // Process 852 field(s)
+                                        if ($fs852 = $marcRec->getFields('852')) {
+                                            // Iterate over all 852 fields available
+                                            foreach ($fs852 as $f852) {
+                                                // Check if ind1 is '8'. We only
+                                                // process these fields
+                                                if ($f852->getIndicator('1')=='8') {
+                                                    // Add data from subfields to
+                                                    // arrays as their key for having
+                                                    // unique values. We just use
+                                                    // 'true' as array values.
+                                                    foreach ($f852->getSubfields('b')
+                                                        as $f852b) {
+                                                        $libCodes[$f852b
+                                                            ->getData()] = true;
+                                                    }
+                                                    foreach ($f852->getSubfields('c')
+                                                        as $f852c) {
+                                                        $locCodes[$f852c
+                                                            ->getData()] = true;
+                                                    }
+                                                    foreach ($f852->getSubfields('h')
+                                                        as $f852h) {
+                                                        $callNo[$f852h
+                                                            ->getData()] = true;
+                                                    }
+                                                    foreach ($f852->getSubfields('z')
+                                                        as $f852z) {
+                                                        $callNoNote[$f852z
+                                                            ->getData()] = true;
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Iterate over all 866 fields available
+                                        foreach ($fs866 as $f866) {
+                                            // Check if ind1 is '3'
+                                            if ($f866->getIndicator('1') == '3') {
+                                                foreach ($f866->getSubfields('a')
+                                                    as $f86630a) {
+                                                    $sumHoldings[$f86630a
+                                                        ->getData()] = true;
+                                                }
+                                                foreach ($f866->getSubfields('z')
+                                                    as $f86630z) {
+                                                    $gaps[$f86630z
+                                                        ->getData()] = true;
+                                                }
+                                            }
+                                            // Check if ind1 is 'blank'
+                                            if ($f866->getIndicator('1') == ' ') {
+                                                foreach ($f866->getSubfields('a')
+                                                    as $f866_0a) {
+                                                    $sumHoldingsPrefix[$f866_0a
+                                                        ->getData()] = true;
+                                                }
+                                                foreach ($f866->getSubfields('z')
+                                                    as $f866_0z) {
+                                                    $sumHoldingsNote[$f866_0z
+                                                        ->getData()] = true;
+                                                }
+                                            }
+                                        }
+
+                                        $summarizedHoldings[] = [
+                                            'library' => ($libCodes) ? implode(', ', array_keys($libCodes)) : null,
+                                            'location' => ($locCodes) ? implode(', ', array_keys($locCodes)) : 'UNASSIGNED',
+                                            'callnumber' => ($callNo) ? implode(', ', array_keys($callNo)) : null,
+                                            'callnumber_notes' => ($callNoNote) ? array_keys($callNoNote) : null,
+                                            'holdings_available' => ($sumHoldings) ? implode(', ', array_keys($sumHoldings)) : null,
+                                            'gaps' => ($gaps) ? array_keys($gaps) : null,
+                                            'holdings_prefix' => ($sumHoldingsPrefix) ? implode(', ', array_keys($sumHoldingsPrefix)) : null,
+                                            'holdings_notes' => ($sumHoldingsNote) ? array_keys($sumHoldingsNote) : null,
+                                        ];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return empty(array_filter($summarizedHoldings)) ? [] : $summarizedHoldings;
+    }
+
+
+    /**
+     * Check if request is valid
+     *
+     * This is responsible for determining if an item is requestable
+     * 
+     * AK: We use an array as return value instead of a boolean. That way we can
+     * better customize the messages displayed to the user.
+     *
+     * @param string $id     The record id
+     * @param array  $data   An array of item data
+     * @param patron $patron An array of patron data
+     *
+     * @return bool True if request is valid, false if not
+     */
+    public function checkRequestIsValid($id, $data, $patron)
+    {
+        // Check if we have a text that we should display instead of request or
+        // recall buttons
+        if (($library = $data['library'] ?? false)
+            && ($location = $data['location'] ?? false)
+        ) {
+            // Get data about fulfillment unit and location
+            $locData = $this->getLocationData($library, $location);
+            $fulUnit = $locData['fulfillment_unit'] ?: null;
+
+            // Get texts for fulfillment units and locations from Alma config
+            $fulUnitTexts = $this->config['Holds']['fulfillment_unit_text'] ?? null;
+            $locTexts = $this->config['Holds']['location_text'] ?? null;
+            $locationText = $locTexts[$location] ?? $fulUnitTexts[$fulUnit] ?? null;
+
+            // Return the location text if we have one
+            if ($locationText) {
+                return ['valid' => false, 'status' => $locationText];
+            }
+        }
+
+        $retVal = ['valid' => false, 'status' => 'RequestNotPossible'];
+
+        $patronId = $patron['cat_username'];
+        $level = $data['level'] ?? 'copy';
+        if ('copy' === $level) {
+            // Call the request-options API for the logged-in user
+            $requestOptionsPath = '/bibs/' . urlencode($id)
+                . '/holdings/' . urlencode($data['holding_id']) . '/items/'
+                . urlencode($data['item_id']) . '/request-options?user_id='
+                . urlencode($patronId);
+
+            // Make the API request
+            $requestOptions = $this->makeRequest($requestOptionsPath);
+        } elseif ('title' === $level) {
+            $hmac = explode(':', $this->config['Holds']['HMACKeys'] ?? '');
+            if (!in_array('level', $hmac) || !in_array('description', $hmac)) {
+                return false;
+            }
+            // Call the request-options API for the logged-in user
+            $requestOptionsPath = '/bibs/' . urlencode($id)
+                . '/request-options?user_id=' . urlencode($patronId);
+
+            // Make the API request
+            $requestOptions = $this->makeRequest($requestOptionsPath);
+        } else {
+            return $retVal;
+        }
+
+        // Check possible request types from the API answer
+        $requestTypes = $requestOptions->xpath(
+            '/request_options/request_option//type'
+        );
+        
+        foreach ($requestTypes as $requestType) {
+            if ('HOLD' === (string)$requestType) {
+                $retVal['valid'] = true;
+                $retVal['status'] = (isset($data['isRecall']))
+                    ? 'Recall This'
+                    : 'Place a Hold';
+                return $retVal;
+            }
+        }
+
+        return $retVal;
+    }
 
 
     /**
@@ -1013,4 +1472,23 @@ implements
 
         return $purgeDate;
     }
+
+
+    /**
+     * Helper method to determine whether or not a certain method can be
+     * called on this driver. Required method for any smart drivers.
+     *
+     * @param string $method The name of the called method.
+     * @param array  $params Array of passed parameters
+     *
+     * @return bool True if the method can be called with the given parameters,
+     * false otherwise.
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
+    public function supportsMethod($method, $params)
+    {
+        return is_callable([$this, $method]);
+    }
+    
 }

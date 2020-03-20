@@ -616,6 +616,148 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * Get summarized holdings and add it to the holdings array that is returned from
+     * the default Alma ILS driver. This is quite specific to Austrian libraries.
+     * See below for information on used MARC fields
+     * 
+     * TODO:
+     *  - Less nesting in code below.
+     *  - Fields 852b and 852c are not repeated in Austrian libraries, but we should
+     *    consider the fact that these fields are repeatable according to the
+     *    official Marc21 documentation.
+     *  
+     * Marc holding field 852 (= "HOL" field in our indexed data)
+     * See https://wiki.obvsg.at/Katalogisierungshandbuch/KategorienuebersichtB852FE
+     * - Library Code:      tag=HOL ind1=8 ind2=1|# subfield=b
+     * - Location:          tag=HOL ind1=8 ind2=1|# subfield=c
+     * - Call No.:          tag=HOL ind1=8 ind2=1|# subfield=h
+     * - Note on call no.:  tag=HOL ind1=8 ind2=1|# subfield=k
+     * 
+     * Marc holding field 866 (= "HOL" field in our indexed data)
+     * See https://wiki.obvsg.at/Katalogisierungshandbuch/KategorienuebersichtB866FE
+     * - Summarized holdings:                   tag=HOL ind1=3 ind2=0 subfield=a
+     * - Gaps:                                  tag=HOL ind1=3 ind2=0 subfield=z
+     * - Prefix text for summarized holdings:   tag=HOL ind1=# ind2=0 subfield=a
+     * - Note for summarized holdings:          tag=HOL ind1=# ind2=0 subfield=z
+     * 
+     * @param [type] $id
+     * @param [type] $patron
+     * @param array $options
+     * @return array
+     */
+    public function getSummarizedHoldings() {
+        // Initialize variables
+        $summarizedHoldings = [];
+
+        // Get all HOL fields from the MarcXML record
+        $holFields = $this->getMarcRecord()->getFields('HOL');
+
+        // Return null if there is no HOL field
+        if (empty($holFields)) {
+            return null;
+        }
+
+        // Group the fields by holding ID. This way we have one array that includes
+        // all related fields (852 and 866 fields of the same holdings record).
+        $groupedHols = [];
+        foreach ($holFields as $holField) {
+            $holId = $holField->getSubfield('8')->getData();
+            $groupedHols[$holId][] = $holField;
+        }
+
+        foreach ($groupedHols as $holId => $groupedHol) {
+            // Check if we have a HOL field with value "3" in ind1. This indicates
+            // that we have summarized holding information.
+            $hasSumHols = false;
+            foreach ($groupedHol as $holField) {
+                if ($holField->getIndicator('1')=='3') {
+                    $hasSumHols = true;
+                    break;
+                }
+            }
+
+            if ($hasSumHols) {
+                $libraryCode = null;
+                $locationCode = null;
+                $callNo = null;
+                $callNoNote = null;
+                $sumHoldings = null;
+                $gaps = null;
+                $sumHoldingsPrefix = null;
+                $sumHoldingsNote = null;
+
+                foreach ($groupedHol as $holField) {
+                    // Process HOL field(s) with value "8" in ind1. These are values
+                    // from the 852 field.
+                    if ($holField->getIndicator('1')=='8') {
+                        // Add data from subfields to arrays as their key for having
+                        // unique values. We just use 'true' as array values.
+                        foreach ($holField->getSubfields('b') as $HOLb) {
+                            $libraryCode[$HOLb->getData()] = true;
+                        }
+                        foreach ($holField->getSubfields('c') as $HOLc) {
+                            $locationCode[$HOLc->getData()] = true;
+                        }
+                        foreach ($holField->getSubfields('h') as $HOLh) {
+                            $callNo[$HOLh->getData()] = true;
+                        }
+                        foreach ($holField->getSubfields('k') as $HOLk) {
+                            $callNoNote[$HOLk->getData()] = true;
+                        }
+                    }
+                    // Process HOL field(s) with value "3" in ind1. These are values
+                    // from the 866 field.
+                    if ($holField->getIndicator('1') == '3') {
+                        foreach ($holField->getSubfields('a') as $HOL30a) {
+                            $sumHoldings[$HOL30a->getData()] = true;
+                        }
+                        foreach ($holField->getSubfields('z') as $HOL30z) {
+                            $gaps[$HOL30z->getData()] = true;
+                        }
+                    }
+                    // Process HOL field(s) with value "blank" in ind1. These are
+                    // values from the 866 field.
+                    if ($holField->getIndicator('1') == ' ') {
+                        foreach ($holField->getSubfields('a') as $HOL_0a) {
+                            $sumHoldingsPrefix[$HOL_0a->getData()] = true;
+                        }
+                        foreach ($holField->getSubfields('z') as $HOL_0z) {
+                            $sumHoldingsNote[$HOL_0z->getData()] = true;
+                        }
+                    }
+                }
+
+                $summarizedHoldings[] = [
+                    'library' => ($libraryCode)
+                        ? implode(', ', array_keys($libraryCode))
+                        : null,
+                    'location' => ($locationCode)
+                        ? implode(', ', array_keys($locationCode))
+                        : 'UNASSIGNED',
+                    'callnumber' => ($callNo)
+                        ? implode(', ', array_keys($callNo))
+                        : null,
+                    'callnumber_notes' => ($callNoNote)
+                        ? array_keys($callNoNote)
+                        : null,
+                    'holdings_available' => ($sumHoldings)
+                        ? implode(', ', array_keys($sumHoldings))
+                        : null,
+                    'gaps' => ($gaps)? array_keys($gaps) : null,
+                    'holdings_prefix' => ($sumHoldingsPrefix)
+                        ? implode(', ', array_keys($sumHoldingsPrefix))
+                        : null,
+                    'holdings_notes' => ($sumHoldingsNote)
+                        ? array_keys($sumHoldingsNote)
+                        : null
+                ];
+            }
+        }
+
+        return $summarizedHoldings;
+    }
+
+    /**
      * AK: Callback function for array_filter function.
      * Default array_filter would not only filter out empty or null values, but also
      * the number "0" (as it evaluates to false). So if a value (e. g. a title) would
