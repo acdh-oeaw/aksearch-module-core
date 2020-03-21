@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -28,7 +28,6 @@
 namespace AkSearch\Controller\Plugin;
 
 use Interop\Container\ContainerInterface;
-use Zend\ServiceManager\Factory\FactoryInterface;
 
 /**
  * AK: Extending factory for NewItems controller plugin.

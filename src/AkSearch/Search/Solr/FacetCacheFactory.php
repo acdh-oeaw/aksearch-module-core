@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -42,7 +42,7 @@ use Interop\Container\ContainerInterface;
 class FacetCacheFactory extends \VuFind\Search\Solr\FacetCacheFactory
 {
     /**
-     * Create an object
+     * AK: Create an object
      *
      * @param ContainerInterface $container     Service manager
      * @param string             $requestedName Service being created
@@ -67,11 +67,12 @@ class FacetCacheFactory extends \VuFind\Search\Solr\FacetCacheFactory
         $cacheManager = $container->get(\VuFind\Cache\Manager::class);
         $language = $container->get(\Zend\Mvc\I18n\Translator::class)->getLocale();
 
-        // AK: Create authorization service and pass it to
-        //     \AkSearch\Search\Solr\FacetCache
+        // AK: Create authorization service for passing it to
+        // \AkSearch\Search\Solr\FacetCache below
         $authService = $container->get(\ZfcRbac\Service\AuthorizationService::class);
         
-        // AK: Get facets.ini configs and pass it to \AkSearch\Search\Solr\FacetCache
+        // AK: Get facets.ini configs for passing it to
+        // \AkSearch\Search\Solr\FacetCache below
         $configLoader = $container->get(\VuFind\Config\PluginManager::class);
         $facetConfigs = $configLoader->get('facets')->toArray();
 

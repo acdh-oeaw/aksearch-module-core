@@ -277,6 +277,7 @@ class RecordDataFormatterFactory
                         // The .phtml template to use
                         'template' => 'data-authors.phtml',
                         // Values that are passed to the template
+                        // TODO: Should we add some schema.org stuff here?
                         'context' => [
                             'role' => $role,
                             'authId' => key($values)
@@ -290,6 +291,7 @@ class RecordDataFormatterFactory
 
     /**
      * Get default specifications for displaying data in the description tab.
+     * AK: Added/removed some information.
      *
      * @return array
      */
@@ -314,7 +316,6 @@ class RecordDataFormatterFactory
         $spec->setLine('Access', 'getAccessRestrictions');
         $spec->setLine('Finding Aid', 'getFindingAids');
         $spec->setLine('Publication_Place', 'getHierarchicalPlaceNames');
-
         $spec->setLine('Level', 'getBibliographicLevel', null,
             ['translate' => true]);
         $spec->setLine('Form', 'getForms', null, ['translate' => true]);
@@ -323,9 +324,7 @@ class RecordDataFormatterFactory
         $spec->setLine('Carrier', 'getCarriers', null, ['translate' => true]);
         $spec->setLine('Supplements', 'getSupplements');
         $spec->setLine('SupplementParents', 'getSupplementParents');
-        
         $spec->setTemplateLine('Author Notes', true, 'data-authorNotes.phtml');
-        
         return $spec->getArray();
     }
 

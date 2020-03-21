@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -41,7 +41,7 @@ use Interop\Container\ContainerInterface;
 class ResultsFactory extends \VuFind\Search\Solr\ResultsFactory
 {
     /**
-     * Create an object
+     * AK: Create an object
      *
      * @param ContainerInterface $container     Service manager
      * @param string             $requestedName Service being created
@@ -57,12 +57,10 @@ class ResultsFactory extends \VuFind\Search\Solr\ResultsFactory
     public function __invoke(ContainerInterface $container, $requestedName,
         array $options = null
     ) {
-        // AK: Create authorization service and pass it to
-        //     \AkSearch\Search\Solr\FacetCache
+        // AK: Create authorization service
         $authService = $container->get(\ZfcRbac\Service\AuthorizationService::class);
         
-
-        // AK: Get facets.ini configs and pass it to \AkSearch\Search\Solr\FacetCache
+        // AK: Get facets.ini configs
         $configLoader = $container->get(\VuFind\Config\PluginManager::class);
         $facetConfigs = $configLoader->get('facets')->toArray();
 

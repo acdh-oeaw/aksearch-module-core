@@ -99,16 +99,18 @@ class Citation extends \VuFind\View\Helper\Root\Citation
         $edition = $driver->tryMethod('getEdition');
 
         // Store everything:
-        // AK: Add titleSection
+        
         $this->driver = $driver;
         $this->details = [
             'authors' => $this->prepareAuthors($authors),
             'title' => trim($title), 'subtitle' => trim($subtitle),
+            // AK: Add titleSection
             'titleSection' => $driver->tryMethod('getTitleSection'),
             'pubPlace' => $pubPlaces[0] ?? null,
             'pubName' => $publishers[0] ?? null,
             'pubDate' => $pubDates[0] ?? null,
             'edition' => empty($edition) ? [] : [$edition],
+            // AK: Use getWholeContainerTitle
             'journal' => $driver->tryMethod('getWholeContainerTitle')
         ];
 
@@ -136,12 +138,14 @@ class Citation extends \VuFind\View\Helper\Root\Citation
                 $title .= ' : ' . $subtitle;
             }
         }
+
+        // AK: Get title section and add it to the title
         if (isset($this->details['titleSection'])) {
             $titleSection = $this->stripPunctuation($this->details['titleSection']);
-            // Capitalize title section and apply it, assuming it really exists:
+            // AK: Capitalize title section and apply it, assuming it really exists:
             if (!empty($titleSection)) {
-                $titleSection
-                    = strtoupper(substr($titleSection, 0, 1)) . substr($titleSection, 1);
+                $titleSection = strtoupper(substr($titleSection, 0, 1))
+                    .substr($titleSection, 1);
                 $title .= ' : ' . $titleSection;
             }
         }

@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -66,6 +66,7 @@ class FacetCache extends \VuFind\Search\Solr\FacetCache
 
     /**
      * Constructor
+     * AK: Adding $authService and $facetConfig
      *
      * @param Results                               $r           Search results object
      * @param \VuFind\Cache\Manager                 $cm          Cache manager

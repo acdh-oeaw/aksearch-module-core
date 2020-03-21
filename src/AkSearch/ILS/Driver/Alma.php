@@ -39,16 +39,13 @@ use SimpleXMLElement;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ils_drivers Wiki
  */
-class Alma
-extends \VuFind\ILS\Driver\Alma
-implements
+class Alma extends \VuFind\ILS\Driver\Alma implements
     \VuFind\Db\Table\DbTableAwareInterface,
     \VuFind\I18n\Translator\TranslatorAwareInterface
 {
     use AlmaTrait;
     use \VuFind\Db\Table\DbTableAwareTrait;
     use \VuFind\I18n\Translator\TranslatorAwareTrait;
-
 
     /**
      * Get Holding
@@ -101,22 +98,22 @@ implements
             // the items paginator.
             $results['total'] = (int)$items->attributes()->total_record_count;
 
-            // Get texts for fulfillment units from Alma config
+            // AK: Get texts for fulfillment units from Alma config
             $fulUnitTexts = $this->config['Holds']['fulfillment_unit_text'] ?? null;
             
-            // Get texts for locations from Alma config
+            // AK: Get texts for locations from Alma config
             $locTexts = $this->config['Holds']['location_text'] ?? null;
 
             foreach ($items->item as $item) {
 
-                // Get location data
+                // AK: Get location data
                 $library = (string)$item->item_data->library ?: null;
                 $location = (string)$item->item_data->location ?: null;
                 $locData = $this->getLocationData($library, $location);
 
-                // Check if this location is suppressed from Alma. See the setting
-                // "Suppress from Discovery" in the config for "Physical Locations"
-                // in Alma.
+                // AK: Check if this location is suppressed from Alma. See the
+                // setting "Suppress from Discovery" in the config for "Physical
+                // Locations" in Alma.
                 $show = !$locData['suppress_from_publishing'] ?? true;
 
                 if ($show) {
@@ -127,7 +124,6 @@ implements
                     $number = ++$copyCount;
                     $holdingId = (string)$item->holding_data->holding_id;
                     $itemId = (string)$item->item_data->pid;
-                    //$processType = (string)$item->item_data->process_type;
                     $barcode = (string)$item->item_data->barcode;
                     $requested = ((string)$item->item_data->requested == 'false')
                         ? false
@@ -137,7 +133,7 @@ implements
                         : null;
 
     
-                    // Get the number of requests
+                    // AK: Get the number of requests
                     $noOfRequests = 0;
                     if ($requested) {
                         $requestPath = '/bibs/' . urlencode($id) . '/holdings/'
@@ -148,7 +144,7 @@ implements
                             ->attributes()['total_record_count'] ?: 0;
                     }
     
-                    // Check if the item is to be recalled
+                    // AK: Check if the item is to be recalled
                     $isRecall = false;
                     if ($duedate || $requested) {
                         $isRecall = true;
@@ -173,9 +169,9 @@ implements
                         'availability' => $this->getAvailabilityFromItem($item),
                         'status' => (string)$item->item_data->base_status[0]
                             ->attributes()['desc'] ?: null,
-                        // The key 'location' must contain the location code as this is
-                        // used for configs in Alma.ini, e. g. "location_text" and
-                        // "fulfillment_unit_text"
+                        // AK: The key 'location' must contain the location code as
+                        // this is used for configs in Alma.ini, e. g.
+                        // "location_text" and "fulfillment_unit_text"
                         'location' => $location,
                         'reserve' => 'N',
                         'callnumber' => (string)$item->holding_data->call_number ?: null,
@@ -211,8 +207,26 @@ implements
                     ];
                 }
             }
-
         }
+
+        // Fetch also digital and/or electronic inventory if configured
+        $types = $this->getInventoryTypes();
+        if (in_array('d_avail', $types) || in_array('e_avail', $types)) {
+            // No need for physical items
+            $key = array_search('p_avail', $types);
+            if (false !== $key) {
+                unset($types[$key]);
+            }
+            $statuses = $this->getStatusesForInventoryTypes((array)$id, $types);
+            $electronic = [];
+            foreach ($statuses as $record) {
+                foreach ($record as $status) {
+                    $electronic[] = $status;
+                }
+            }
+            $results['electronic_holdings'] = $electronic;
+        }
+
         return $results;
     }
 
@@ -426,7 +440,6 @@ implements
         return empty(array_filter($summarizedHoldings)) ? [] : $summarizedHoldings;
     }
 
-
     /**
      * Check if request is valid
      *
@@ -443,21 +456,21 @@ implements
      */
     public function checkRequestIsValid($id, $data, $patron)
     {
-        // Check if we have a text that we should display instead of request or
+        // AK: Check if we have a text that we should display instead of request or
         // recall buttons
         if (($library = $data['library'] ?? false)
             && ($location = $data['location'] ?? false)
         ) {
-            // Get data about fulfillment unit and location
+            // AK: Get data about fulfillment unit and location
             $locData = $this->getLocationData($library, $location);
             $fulUnit = $locData['fulfillment_unit'] ?: null;
 
-            // Get texts for fulfillment units and locations from Alma config
+            // AK: Get texts for fulfillment units and locations from Alma config
             $fulUnitTexts = $this->config['Holds']['fulfillment_unit_text'] ?? null;
             $locTexts = $this->config['Holds']['location_text'] ?? null;
             $locationText = $locTexts[$location] ?? $fulUnitTexts[$fulUnit] ?? null;
 
-            // Return the location text if we have one
+            // AK: Return the location text if we have one
             if ($locationText) {
                 return ['valid' => false, 'status' => $locationText];
             }
@@ -509,7 +522,6 @@ implements
         return $retVal;
     }
 
-
     /**
      * Create a user in Alma via API call
      *
@@ -523,7 +535,7 @@ implements
     public function createAlmaUser($allParams)
     {
         // Get config for creating new Alma users from Alma.ini
-        $newUserConfig = $this->config['NewUser'];
+        $newUserConfig = $this->config['NewUser'] ?? [];
 
         // Check if all necessary configs are set
         $configParams = [
@@ -542,14 +554,14 @@ implements
             }
         }
 
-        // Get current date
+        // AK: Get current date
         $dateToday = date('Y-m-d');
 
-        // Calculate gender from form value
+        // AK: Calculate gender from form value
         $genders = ['m' => 'MALE', 'f' => 'FEMALE', 'd' => 'OTHER'];
         $gender = $genders[$allParams['salutation']] ?? 'NONE';
 
-        // Convert birthday to Alma date format
+        // AK: Convert birthday to Alma date format
         $birthday = $allParams['birthday'] ?? null;
         $birthdayTs = null;
         if ($birthday != null) {
@@ -557,7 +569,7 @@ implements
         }
         $birthdayAlma = ($birthdayTs != null) ? date('Y-m-d', $birthdayTs) : null;
 
-        // Get expiry date and purge date in Alma date format
+        // AK: Get expiry date and purge date in Alma date format
         $expiryDate = ($this->getExpiryDate())
             ? $this->getExpiryDate()->format('Y-m-d')
             : null;
@@ -565,7 +577,7 @@ implements
             ? $this->getPurgeDate()->format('Y-m-d')
             : null;
 
-        // Get statistical values
+        // AK: Get statistical values
         $statArr = [];
         foreach ($allParams as $key => $statValue) {
             $keyParts = explode('_', $key);
@@ -578,14 +590,14 @@ implements
             }
         }
 
-        // Get the AlmaUserObject.xml file from the given theme and convert it to
+        // AK: Get the AlmaUserObject.xml file from the given theme and convert it to
         // a simple XML object
         $theme = $this->configLoader->get('config')->Site->theme ?? 'root';
         $almaUserObj = simplexml_load_file(
             "themes/" . $theme . "/templates/Auth/AlmaDatabase/AlmaUserObject.xml"
         );
 
-        // Set values to the simple XML object
+        // AK: Set values to the simple XML object
         $almaUserObj->record_type = $newUserConfig['recordType'];
         $almaUserObj->first_name = $allParams['firstname'];
         $almaUserObj->last_name = $allParams['lastname'];
@@ -621,13 +633,13 @@ implements
         $almaUserObj->user_identifiers->user_identifier->value =
             $allParams['username'];
 
-        // Add statistic values if applicable
+        // AK: Add statistic values if applicable
         if (!empty($statArr)) {
-            // Create parent statistic element
+            // AK: Create parent statistic element
             $almaUserObj->addChild('user_statistics');
 
-            // For each given statistic value, create a basic statitic element with
-            // the necessary child elements and add it to the parent element.
+            // AK: For each given statistic value, create a basic statitic element
+            // with the necessary child elements and add it to the parent element.
             // INFO: The data can't be added in this step because we have duplicate
             //       elements. Depending on the acutal implementation, we either
             //       would get an error or the data would be overwritten.
@@ -639,7 +651,7 @@ implements
                 $statObj->addChild('statistic_category');
             }
 
-            // Add the data to the statistic elements that were created before
+            // AK: Add the data to the statistic elements that were created before
             $counter = 0;
             foreach ($statArr as $statName => $statValue) {
                 $almaUserObj->user_statistics->user_statistic[$counter]
@@ -650,22 +662,22 @@ implements
             }
         }
 
-        // Add user block element if applicable
+        // AK: Add user block element if applicable
         if (filter_var(($newUserConfig['blockUser'] ?? false),
             FILTER_VALIDATE_BOOLEAN
         )) {
-            // Create basic user block element
+            // AK: Create basic user block element
             $almaUserObj->addChild('user_blocks')->addChild('user_block')
                 ->addAttribute('segment_type', 'Internal');
 
-            // Add child elements to basic user block element
+            // AK: Add child elements to basic user block element
             $almaUserObj->user_blocks->user_block->addChild('block_type');
             $almaUserObj->user_blocks->user_block->addChild('block_description');
             $almaUserObj->user_blocks->user_block->addChild('block_status');
             $almaUserObj->user_blocks->user_block->addChild('block_note');
             $almaUserObj->user_blocks->user_block->addChild('created_by');
 
-            // Add values to user block elements
+            // AK: Add values to user block elements
             $almaUserObj->user_blocks->user_block->block_type =
                 $newUserConfig['blockTypeCode'];
             $almaUserObj->user_blocks->user_block->block_description =
@@ -678,14 +690,14 @@ implements
                 $newUserConfig['blockCreatedBy'];
         }
 
-        // Convert simple XML element to string
+        // AK: Convert simple XML element to string
         $almaUserObjStr = $almaUserObj->asXML();
 
-        // Remove whitespaces from XML string
+        // AK: Remove whitespaces from XML string
         $almaUserObjStr = preg_replace("/\n/", "", $almaUserObjStr);
         $almaUserObjStr = preg_replace("/>\s*</", "><", $almaUserObjStr);
 
-        // Create user in Alma via API by POSTing the user XML
+        // AK: Create user in Alma via API by POSTing the user XML
         $almaAnswer = $this->makeRequest(
             '/users',
             [],
@@ -699,9 +711,6 @@ implements
         // thrown in makeRequest.
         return $almaAnswer;
     }
-
-
-
 
     /**
      * Get Patron Profile
@@ -745,16 +754,16 @@ implements
         if ($contact) {
             if ($contact->addresses) {
 
-                // Get preferred address
+                // AK: Get preferred address
                 $prefAddress = $contact->addresses
                     ->xpath('address[@preferred="true"]');
 
-                // If no preferred address is found, get the first one
+                // AK: If no preferred address is found, get the first one
                 $address = (!empty($prefAddress))
                     ? $prefAddress[0]
                     : $contact->addresses[0]->address;
 
-                // Set address details to return array
+                // AK: Set address details to return array
                 $profile['address1'] = (isset($address->line1))
                     ? (string) $address->line1
                     : null;
@@ -781,34 +790,34 @@ implements
                     : null;
             }
 
-            // Get e-mail object from Alma API user object
+            // AK: Get e-mail object from Alma API user object
             $emailObj = $this->getEmailFromAlmaXmlUserObject($xml);
 
-            // Set e-mail address to return array
+            // AK: Set e-mail address to return array
             $profile['email'] = (isset($emailObj->email_address))
                 ? (string) $emailObj->email_address
                 : null;
                 
-            // Get non-mobile phone object from Alma API user object
+            // AK: Get non-mobile phone object from Alma API user object
             $phoneObj = $this->getPhoneFromAlmaXmlUserObject($xml);
 
-            // Get non-mobile phone number as string
+            // AK: Get non-mobile phone number as string
             $phoneNo = (isset($phoneObj->phone_number))
                 ? (string) $phoneObj->phone_number
                 : null;
 
-            // Set non-mobile phone number to return array
+            // AK: Set non-mobile phone number to return array
             $profile['phone'] = $phoneNo;
 
-            // Get mobile phone object from Alma API user object
+            // AK: Get mobile phone object from Alma API user object
             $mobilePhoneObj = $this->getMobilePhoneFromAlmaXmlUserObject($xml);
 
-            // Get the mobile phone number (if any exists)
+            // AK: Get the mobile phone number (if any exists)
             $mobileNo = (isset($mobilePhoneObj->phone_number))
                 ? (string) $mobilePhoneObj->phone_number
                 : null;
 
-            // If mobile phone and non-mobile phone are the same, set to null so
+            // AK: If mobile phone and non-mobile phone are the same, set to null so
             // that we don't have duplicate phone numbers in the view
             $mobileNo = ($mobileNo == $phoneNo) ? null : $mobileNo;
 
@@ -816,7 +825,7 @@ implements
             $profile['mobile_phone'] = $mobileNo;
         }
 
-        // Set usergroup details to cache
+        // AK: Set usergroup details to cache
         if (isset($this->cache)) {
             $patronIdKey = $this->getCleanCacheKey($patronId);
             $this->cache->setItem(
@@ -1330,24 +1339,24 @@ implements
      */
     public function getConfig($function, $params = null)
     {
-        // Settings for displaying and getting the loan history of a user
+        // AK: Settings for displaying and getting the loan history of a user
         if ($function === 'getMyTransactionHistory') {
             if (empty($this->config['TransactionHistory']['enabled'])) {
                 return false;
             }
 
-            // Get username from $params array
+            // AK: Get username from $params array
             $username = $params['cat_username'] ?? null;
 
-            // Initialize variable for saving loans check
+            // AK: Initialize variable for saving loans check
             $saveLoans = null;
 
-            // Check if user wants to save loans
+            // AK: Check if user wants to save loans
             if ($username) {
-                // Get the MySQL user table
+                // AK: Get the MySQL user table
                 $userTable = $this->getDbTable('user');
 
-                // Get info about currently logged in user from the user table
+                // AK: Get info about currently logged in user from the user table
                 $user = $userTable->getByUsername($username, false);
 
                 try {
@@ -1356,8 +1365,8 @@ implements
                         FILTER_VALIDATE_BOOLEAN
                     );
                 } catch (\Exception $e) {
-                    // Fail over. $saveLoans will be null which indicates that this
-                    // functionality can't be used.
+                    // AK: Fail over. $saveLoans will be null which indicates that
+                    // this functionality can't be used.
                 }
             }
 
@@ -1378,15 +1387,33 @@ implements
             ];
         }
 
+        if ($function == 'patronLogin') {
+            return [
+                'loginMethod' => $this->config['Catalog']['loginMethod'] ?? 'vufind'
+            ];
+        }
         if (isset($this->config[$function])) {
             $functionConfig = $this->config[$function];
 
             // Set default value for "itemLimit" in Alma driver
-            if ($function === 'Holds') {
-                $functionConfig['itemLimit'] = $functionConfig['itemLimit']
-                    ?? 10
-                    ?: 10;
+            if ($function === 'Holdings') {
+                // Use itemLimit in Holds as fallback for backward compatibility
+                $functionConfig['itemLimit'] = ($functionConfig['itemLimit']
+                    ?? $this->config['Holds']['itemLimit']
+                    ?? 10) ?: 10;
             }
+        } elseif ('getMyTransactions' === $function) {
+            $functionConfig = [
+                'max_results' => 100,
+                'sort' => [
+                    'checkout desc' => 'sort_checkout_date_desc',
+                    'checkout asc' => 'sort_checkout_date_asc',
+                    'due desc' => 'sort_due_date_desc',
+                    'due asc' => 'sort_due_date_asc',
+                    'title asc' => 'sort_title'
+                ],
+                'default_sort' => 'due asc'
+            ];
         } else {
             $functionConfig = false;
         }
@@ -1473,7 +1500,6 @@ implements
         return $purgeDate;
     }
 
-
     /**
      * Helper method to determine whether or not a certain method can be
      * called on this driver. Required method for any smart drivers.
@@ -1490,5 +1516,5 @@ implements
     {
         return is_callable([$this, $method]);
     }
-    
+
 }

@@ -219,7 +219,7 @@ trait MarcAdvancedTrait
     {
         $matches = $this->getFieldArray('PNT', ['a', 'b'], true, ' : ');
         return (is_array($matches) && count($matches) > 0) ?
-        $this->stripNonSortingChars($matches[0]) : null;
+            $this->stripNonSortingChars($matches[0]) : null;
     }
 
     /**
@@ -369,11 +369,6 @@ trait MarcAdvancedTrait
     public function getPrimaryAuthors()
     {
         $primary = $this->getFieldArray('100', ['a', 'b', 'c']);
-        /*
-        $primary = (empty($primary))
-            ? $this->getFieldArray('700', ['a', 'b', 'c'])
-            : $primary;
-        */
         return empty($primary) ? [] : $this->stripNonSortingChars([$primary[0]]);
     }
 
@@ -399,11 +394,6 @@ trait MarcAdvancedTrait
     public function getCorporateAuthors()
     {
         $corps = $this->getFieldArray('110', ['a', 'b', 'c']);
-        /*
-        $corps = (empty($corps))
-            ? $this->getFieldArray('710', ['a', 'b', 'c'])
-            : $corps;
-        */
         return empty($corps) ? [] : $this->stripNonSortingChars([$corps[0]]);
     }
     
@@ -427,11 +417,6 @@ trait MarcAdvancedTrait
     public function getMeetingAuthors()
     {
         $meetings = $this->getFieldArray('111', ['a', 'c', 'd', 'e']);
-        /*
-        $meetings = (empty($meetings))
-            ? $this->getFieldArray('711', ['a', 'c', 'd', 'e'])
-            : $meetings;
-        */
         return empty($meeting) ? [] : $this->stripNonSortingChars([$meetings[0]]);
     }
 
@@ -457,17 +442,6 @@ trait MarcAdvancedTrait
     public function getSecondaryAuthors()
     {
         $secondary = $this->getFieldArray('700', ['a', 'b', 'c']);
-        /*
-        // Check if there is a 100 field. If not, the first entry in a 700 field is
-        // already used as the primary author, so we need to skip that one here as
-        // otherwise we would produce a duplicate.
-        $hasPrimary = (empty($this->getFieldArray('100', ['a', 'b', 'c'])))
-            ? false
-            : true; 
-        if (!empty($secondary) && !$hasPrimary) {
-            unset($secondary[0]);
-        }
-        */
         return empty($secondary) ? [] : $this->stripNonSortingChars($secondary);
     }   
 
@@ -480,17 +454,6 @@ trait MarcAdvancedTrait
     public function getSecondaryCorporateAuthors()
     {
         $secondary = $this->getFieldArray('710', ['a', 'b', 'c']);
-        /*
-        // Check if there is a 110 field. If not, the first entry in a 710 field is
-        // already used as the primary corporate author, so we need to skip that one
-        // here as otherwise we would produce a duplicate.
-        $hasPrimary = (empty($this->getFieldArray('110', ['a', 'b', 'c'])))
-            ? false
-            : true; 
-        if (!empty($secondary) && !$hasPrimary) {
-            unset($secondary[0]);
-        }
-        */
         return empty($secondary) ? [] : $this->stripNonSortingChars($secondary);
     }
 
@@ -502,17 +465,6 @@ trait MarcAdvancedTrait
     public function getSecondaryMeetingAuthors()
     {
         $secondary = $this->getFieldArray('711', ['a', 'c', 'd', 'e']);
-        /*
-        // Check if there is a 111 field. If not, the first entry in a 711 field is
-        // already used as the primary meeting name, so we need to skip that one
-        // here as otherwise we would produce a duplicate.
-        $hasPrimary = (empty($this->getFieldArray('111', ['a', 'c', 'd', 'e'])))
-            ? false
-            : true; 
-        if (!empty($secondary) && !$hasPrimary) {
-            unset($secondary[0]);
-        }
-        */
         return empty($secondary) ? [] : $this->stripNonSortingChars($secondary);
     }
 
@@ -616,9 +568,9 @@ trait MarcAdvancedTrait
     }
 
     /**
-     * Get summarized holdings and add it to the holdings array that is returned from
-     * the default Alma ILS driver. This is quite specific to Austrian libraries.
-     * See below for information on used MARC fields
+     * AK: Get summarized holdings and add it to the holdings array that is returned
+     * from the default Alma ILS driver. This is quite specific to Austrian
+     * libraries. See below for information on used MARC fields
      * 
      * TODO:
      *  - Less nesting in code below.

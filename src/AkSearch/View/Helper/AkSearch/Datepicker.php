@@ -1,11 +1,11 @@
 <?php
 /**
- * View helper for the bootstrap-datepicker.
+ * AK: View helper for the bootstrap-datepicker.
  * See https://bootstrap-datepicker.readthedocs.io
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -29,7 +29,7 @@
 namespace AkSearch\View\Helper\AkSearch;
 
 /**
- * View helper for the bootstrap-datepicker.
+ * AK: View helper for the bootstrap-datepicker.
  *
  * @category AKsearch
  * @package  View_Helpers
@@ -41,21 +41,21 @@ class Datepicker extends \Zend\View\Helper\AbstractHelper
 {
 
     /**
-     * The [Site] section of config.ini
+     * AK: The [Site] section of config.ini
      *
      * @var array
      */
     protected $siteConfig;
 
     /**
-     * The active user language
+     * AK: The active user language
      *
      * @var string
      */
     protected $activerUserLanguage;
 
     /**
-     * Constructor
+     * AK: Constructor
      *
      * @param array  $siteConfig The [Site] section of config.ini
      * @param string $activerUserLanguage The active user language
@@ -70,7 +70,7 @@ class Datepicker extends \Zend\View\Helper\AbstractHelper
 
 
     /**
-     * Get the active user language and format for the bootstrap-datepicker.
+     * AK: Get the active user language and format for the bootstrap-datepicker.
      *
      * @return string The language formated for the bootstrap-datepicker
      */
@@ -85,8 +85,8 @@ class Datepicker extends \Zend\View\Helper\AbstractHelper
     }
 
     /**
-     * Translate the PHP notation of the date format to the bootstrap-datepicker date
-     * format.
+     * AK: Translate the PHP notation of the date format to the bootstrap-datepicker
+     * date format.
      * 
      * @param string $phpFormat The PHP notation of the date format (e. g. Y-m-d). If
      * not set the value from config.ini->[Site]->displayDateFormat will be used. If

@@ -51,6 +51,7 @@ class Holds extends \VuFind\ILS\Logic\Holds
      *
      * @return array A sorted results set
      */
+    /*
     public function getHoldings($id, $ids = null)
     {
         $holdings = [];
@@ -111,6 +112,7 @@ class Holds extends \VuFind\ILS\Logic\Holds
             'holdings' => $this->formatHoldings($holdings),
         ];
     }
+    */
 
     /**
      * Get summarized driver holdings
@@ -205,6 +207,7 @@ class Holds extends \VuFind\ILS\Logic\Holds
             $retVal[$groupKey] = [
                 'items' => $items,
                 'location' => $items[0]['location'] ?? '',
+                // AK: Added location_external_name
                 'location_external_name' => $items[0]['location_external_name']
                     ?? 'UNASSIGNED',
                 'locationhref' => $items[0]['locationhref'] ?? '',

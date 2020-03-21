@@ -1,10 +1,10 @@
 <?php
 /**
- * Permissons Trait
+ * AK: Permissons Trait
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -28,7 +28,7 @@
 namespace AkSearch\Role;
 
 /**
- * Permissons Trait
+ * AK: Permissions Trait
  *
  * @category AKsearch
  * @package  Authorization
@@ -40,7 +40,7 @@ trait PermissionTrait
 {
 
     /**
-     * Check permissions for the given search value
+     * AK: Check permissions for the given search value
      *
      * @param \ZfcRbac\Service\AuthorizationService $authService
      * @param array    $permissionsConfig [Permissions] configs as array in format:
@@ -49,16 +49,16 @@ trait PermissionTrait
      *                                    permission.name2 =>
      *                                      array(...)
      *                                    ...
-     * @param string   $value             The name of the value for checking the permission
+     * @param string   $value             The name of the value for checking the
+     *                                    permission
      * 
-     * @return boolean                    True if permission is granted, false otherwise
+     * @return boolean True if permission is granted, false otherwise
      */
     protected function getPermission($authService, $permissionsConfig, $value)
     {
         $permissionsToCheck = [];
         foreach ($permissionsConfig as $permissionName => $permissionHanlderArray) {
-            if (in_array($value
-            , $permissionHanlderArray)) {
+            if (in_array($value, $permissionHanlderArray)) {
                 $permissionsToCheck[] = $permissionName;
             }
         }
@@ -67,7 +67,8 @@ trait PermissionTrait
             // Return true if no permission configs are set for a search value.
             return true;
         } else {
-            // If permission configs are set for a search value, check the permission status.
+            // If permission configs are set for a search value, check the permission
+            // status.
             foreach ($permissionsToCheck as $permissionToCheck) {
                 if ($authService->isGranted($permissionToCheck)) {
                     // Return true if permission is granted.
@@ -88,9 +89,11 @@ trait PermissionTrait
      * file. The values are rewritten to an array that can be used for checking
      * permissions.
      * 
-     * @param array $facetPermissionsConfig   The raw [Permissions] configs in facet.ini
+     * @param array $facetPermissionsConfig   The raw [Permissions] configs in
+     *                                        facet.ini
      *
-     * @return array An array with rewritten values from [Permissions] configs in facet.ini
+     * @return array An array with rewritten values from [Permissions] configs in
+     *               facet.ini
      */
     protected function getFacetPermissionsConfigs($facetPermissionsConfig)
     {

@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -64,12 +64,12 @@ class Results extends \VuFind\Search\Solr\Results
      */
     protected $writeToCache = false;
 
-
     /**
      * Constructor
+     * AK: Added $authService and $facetConfigs
      *
      * @param \VuFind\Search\Base\Params $params        Object representing user
-     * search parameters.
+     *                                                  search parameters.
      * @param SearchService              $searchService Search service
      * @param Loader                     $recordLoader  Record loader
      */
@@ -87,7 +87,6 @@ class Results extends \VuFind\Search\Solr\Results
         $this->authService = $authService;
         $this->facetConfigs = $facetConfigs;
     }
-
 
     /**
      * AK: Setting class variable $writeToCache. This is important to ensure that ALL
@@ -166,7 +165,6 @@ class Results extends \VuFind\Search\Solr\Results
                 $translateTextDomain = $this->getOptions()
                     ->getTextDomainForTranslatedFacet($field);
             }
-
             // Loop through values:
             foreach ($data as $value => $count) {
 

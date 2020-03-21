@@ -156,6 +156,7 @@ class SolrMarc extends SolrDefault
             'author'     => mb_substr($this->getPrimaryAuthor(), 0, 300, 'utf-8'),
             'callnumber' => $this->getCallNumber(),
             'size'       => $size,
+            // AK: Using parent "getTitle" method
             'title'      => mb_substr(parent::getTitle(), 0, 300, 'utf-8'),
             'recordid'   => $this->getUniqueID(),
             'source'   => $this->getSourceIdentifier(),
@@ -175,16 +176,22 @@ class SolrMarc extends SolrDefault
         if ($upc = $this->getCleanUPC()) {
             $arr['upc'] = $upc;
         }
+        if ($nbn = $this->getCleanNBN()) {
+            $arr['nbn'] = $nbn['nbn'];
+        }
+        if ($ismn = $this->getCleanISMN()) {
+            $arr['ismn'] = $ismn;
+        }
+
         // If an ILS driver has injected extra details, check for IDs in there
         // to fill gaps:
         if ($ilsDetails = $this->getExtraDetail('ils_details')) {
-            foreach (['isbn', 'issn', 'oclc', 'upc'] as $key) {
+            foreach (['isbn', 'issn', 'oclc', 'upc', 'nbn', 'ismn'] as $key) {
                 if (!isset($arr[$key]) && isset($ilsDetails[$key])) {
                     $arr[$key] = $ilsDetails[$key];
                 }
             }
         }
-
         return $arr;
     }
 
@@ -200,12 +207,14 @@ class SolrMarc extends SolrDefault
         // Initialize the return value with "null" as default
         $format = null;
 
+        // Get all formats
         $formats = $this->getFormats();
 
         // Get the first value of the formats array. If there is no format, use
         // "Unknown".
         $format = (count($formats) > 0) ? $formats[0] : 'Unknown';
 
+        // Return only one format
         return $format;
     }
 
@@ -238,6 +247,11 @@ class SolrMarc extends SolrDefault
      * AK: Overrides the getBibliographicLevel method in MarcAdvancedTrait. Get the
      * level of the record from Solr and then - as a fallback - from MarcXML. If no
      * level was found we return null.
+     * 
+     * ATTENTION: The value returned here must be one of the values returned from
+     * \VuFind\RecordDriver\MarcAdvancedTrait::getBibliographicLevel as it is
+     * responsible for e. g. item/title level requests. Values with "Part" in it
+     * will always get item level requests.
      *
      * @return string|null   The level of the record as string or null
      */
@@ -292,7 +306,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get all content summaries (abstracts) from the corresponding Solr field.
+     * AK: Get all content summaries (abstracts) from the corresponding Solr field.
      *
      * @return array|null   All content summaries (abstracts) as an array or null
      */
@@ -302,7 +316,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get all call numbers from the corresponding Solr field. If nothing was found,
+     * Get all call numbers from the corresponding Solr field. If nothing was found
      * get them from MarcXML as a fallback.
      *
      * @return array   An array with call numbers or an empty array
@@ -328,7 +342,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get all possible contributors grouped by role in the right order.
+     * AK: Get all possible contributors grouped by role in the right order.
      * TODO: Make that function shorter and cleaner! Implement a fallback to MarcXML!
      *
      * @return void
@@ -433,7 +447,8 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get information of parent records as an array.
+     * AK: Get information of parent records as an array.
+     * TODO: Fallback to MarcXML
      *
      * @return array    An array with information of parent records or null.
      */
@@ -507,7 +522,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get parent records in consolidated format
+     * AK: Get parent records in consolidated format
      *
      * @return array|null An array of parent record information or null
      */
@@ -549,7 +564,8 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get information of child records as an array.
+     * AK: Get information of child records as an array.
+     * TODO: Fallback to MarcXML
      *
      * @return array    An array with information of child records or null.
      */
@@ -632,7 +648,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Ged pulbication date(s) if there is not date span available.
+     * AK: Get publication date(s) if there is not date-span available.
      *
      * @return array    The publication date(s)
      */
@@ -644,8 +660,8 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get publisher place and name in form "Place : Publisher Name". If only one of
-     * both values exists, the single value will be returned.
+     * AK: Get publisher place and name in form "Place : Publisher Name". If only
+     * one of both values exists, the single value will be returned.
      *
      * @return String   The place and/or name of the publisher or null
      */
@@ -671,8 +687,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get alternative title(s).
-     * 
+     * AK: Get alternative title(s).
      * TODO: Fallback to MarcXML
      * 
      * @return array An array or null
@@ -682,7 +697,8 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get form(s).
+     * AK: Get form(s).
+     * TODO: Fallback to MarcXML
      * 
      * @return array An array or null
      */
@@ -691,7 +707,8 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get content(s).
+     * AK: Get content(s).
+     * TODO: Fallback to MarcXML
      * 
      * @return array An array or null
      */
@@ -700,7 +717,8 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get media types(s).
+     * AK: Get media types(s).
+     * TODO: Fallback to MarcXML
      * 
      * @return array An array or null
      */
@@ -709,7 +727,8 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get media carrier(s).
+     * AK: Get media carrier(s).
+     * TODO: Fallback to MarcXML
      * 
      * @return array An array or null
      */
@@ -718,7 +737,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get supplement issue(s).
+     * AK: Get supplement issue(s).
      * 
      * @return array An array or null
      */
@@ -727,7 +746,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get supplement parent(s).
+     * AK: Get supplement parent(s).
      * 
      * @return array An array or null
      */
@@ -736,7 +755,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get other edition(s).
+     * AK: Get other edition(s).
      * 
      * @return array An array or null
      */
@@ -745,7 +764,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get other physical form(s).
+     * AK: Get other physical form(s).
      * 
      * @return array An array or null
      */
@@ -754,7 +773,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get "issued with" item(s).
+     * AK: Get "issued with" item(s).
      * 
      * @return array An array or null
      */
@@ -763,7 +782,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get preceding title(s).
+     * AK: Get preceding title(s).
      * 
      * @return array An array or null
      */
@@ -772,7 +791,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get succeeding title(s).
+     * AK: Get succeeding title(s).
      * 
      * @return array An array or null
      */
@@ -781,7 +800,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get other relation(s).
+     * AK: Get other relation(s).
      * 
      * @return array An array or null
      */
@@ -790,9 +809,8 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Generic function for getting relations.
-     * 
-     * TODO: If a fallback to MarcXML is possible, implement it.
+     * AK: Generic function for getting relations.
+     * TODO: Implement a fallback to MarcXML if possible.
      * 
      * @return array An array or null
      */
@@ -868,8 +886,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get local dewey number(s)
-     * 
+     * AK: Get local dewey number(s)
      * TODO: Fallback to MarcXML
      * 
      * @return array An array or null
@@ -879,8 +896,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get raw dewey number(s)
-     * 
+     * AK: Get raw dewey number(s)
      * TODO: Fallback to MarcXML
      * 
      * @return array An array or null
@@ -890,7 +906,7 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get all unique dewey number(s)
+     * AK: Get all unique dewey number(s)
      * 
      * @return array An array with unique dewey numbers or null
      */
@@ -905,9 +921,9 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get summarized holdings. First we try to find them in our index data in the
-     * "fullrecord" field which holds the whole MarcXML data. If no HOL fields were
-     * found there, we fall back to the ILS API to find the data.
+     * AK: Get summarized holdings. First we try to find them in our index data in
+     * the "fullrecord" field which holds the whole MarcXML data. If no HOL fields
+     * were found there, we fall back to the ILS API to find the data.
      *
      * @return array An array with summarized holding data or an empty array
      */

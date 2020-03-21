@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -26,6 +26,9 @@
  * @link     https://vufind.org/wiki/development Wiki
  */
 namespace AkSearch\Mailer;
+
+use VuFind\Exception\Mail as MailException;
+use Zend\Mail\Address;
 
 /**
  * AK: Extended VuFind Mailer Class
@@ -153,6 +156,5 @@ class Mailer extends \VuFind\Mailer\Mailer
             throw new MailException($e->getMessage());
         }
     }
-
 
 }

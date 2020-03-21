@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -102,6 +102,7 @@ class Usergroup implements PermissionProviderInterface {
 			$usergroup = null;
 			if (isset($cache)) {
 				$patronIdKey = $this->getCleanCacheKey($user['cat_username']);
+				// TODO: Why do we use the group description, not the group code?
 				// $usergroupCode = $cache->getItem('Alma_User_'.$patronIdKey.'_GroupCode');
 				$usergroup = $cache->getItem('Alma_User_'.$patronIdKey.'_GroupDesc');
 			}

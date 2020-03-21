@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -59,7 +59,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
     protected $permissionsConfig;
 
     /**
-     * Constructor
+     * AK: Constructor
      *
      * @param OptionsManager     $optionsManager    Search options plugin manager
      * @param array              $config            Configuration for search box
@@ -94,6 +94,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
 
     /**
      * Support method for getHandlers() -- load basic settings.
+     * AK: Checking for permissions for using the search handler.
      *
      * @param string $activeSearchClass Active search class ID
      * @param string $activeHandler     Active search handler
@@ -118,6 +119,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
 
     /**
      * Support method for getHandlers() -- load combined settings.
+     * AK: Checking for permissions for using the search handler.
      *
      * @param string $activeSearchClass Active search class ID
      * @param string $activeHandler     Active search handler

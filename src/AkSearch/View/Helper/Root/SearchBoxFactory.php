@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -41,7 +41,7 @@ use Interop\Container\ContainerInterface;
 class SearchBoxFactory extends \VuFind\View\Helper\Root\SearchBoxFactory
 {
     /**
-     * Create an object
+     * AK: Create an object
      *
      * @param ContainerInterface $container     Service manager
      * @param string             $requestedName Service being created

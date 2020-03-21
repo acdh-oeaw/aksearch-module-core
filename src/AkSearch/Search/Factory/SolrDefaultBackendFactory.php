@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2020.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -59,7 +59,7 @@ class SolrDefaultBackendFactory extends
                 && !empty($searchConfig->AkSearch->idFields)
             )
             ? $searchConfig->AkSearch->idFields
-            : 'id'; // Default is "id" Solr field
+            : 'id'; // AK: Default is "id" Solr field
     	$this->uniqueKey = $idFields;
 
         $handlers = [
@@ -77,6 +77,7 @@ class SolrDefaultBackendFactory extends
             array_push($handlers['select']['appends']['fq'], $filter);
         }
 
+        // AK: Use Connector from module AkSearchSearch
         $connector = new \AkSearchSearch\Backend\Solr\Connector(
             $this->getSolrUrl(),
             new \VuFindSearch\Backend\Solr\HandlerMap($handlers),
