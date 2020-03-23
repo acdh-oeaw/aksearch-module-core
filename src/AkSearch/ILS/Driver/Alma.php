@@ -99,10 +99,10 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             $results['total'] = (int)$items->attributes()->total_record_count;
 
             // AK: Get texts for fulfillment units from Alma config
-            $fulUnitTexts = $this->config['Holds']['fulfillment_unit_text'] ?? null;
+            $fulUnitTexts = $this->config['Holdings']['fulfillment_unit_text'] ?? null;
             
             // AK: Get texts for locations from Alma config
-            $locTexts = $this->config['Holds']['location_text'] ?? null;
+            $locTexts = $this->config['Holdings']['location_text'] ?? null;
 
             foreach ($items->item as $item) {
 
@@ -466,8 +466,8 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             $fulUnit = $locData['fulfillment_unit'] ?: null;
 
             // AK: Get texts for fulfillment units and locations from Alma config
-            $fulUnitTexts = $this->config['Holds']['fulfillment_unit_text'] ?? null;
-            $locTexts = $this->config['Holds']['location_text'] ?? null;
+            $fulUnitTexts = $this->config['Holdings']['fulfillment_unit_text'] ?? null;
+            $locTexts = $this->config['Holdings']['location_text'] ?? null;
             $locationText = $locTexts[$location] ?? $fulUnitTexts[$fulUnit] ?? null;
 
             // AK: Return the location text if we have one
