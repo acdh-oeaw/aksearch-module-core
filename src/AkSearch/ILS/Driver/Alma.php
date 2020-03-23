@@ -104,17 +104,24 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             // AK: Get texts for locations from Alma config
             $locTexts = $this->config['Holdings']['location_text'] ?? null;
 
-            foreach ($items->item as $item) {
+            // AK: Get config for hiding items by item policy
+            $hidePolicies = $this->config['Holdings']['hide_item_policy'] ?? null;
 
+            foreach ($items->item as $item) {
                 // AK: Get location data
                 $library = (string)$item->item_data->library ?: null;
                 $location = (string)$item->item_data->location ?: null;
                 $locData = $this->getLocationData($library, $location);
 
+                // AK: Get item policy code
+                $itemPolicyCode = (string)$item->item_data->policy ?: null;
+
                 // AK: Check if this location is suppressed from Alma. See the
                 // setting "Suppress from Discovery" in the config for "Physical
-                // Locations" in Alma.
-                $show = !$locData['suppress_from_publishing'] ?? true;
+                // Locations" in Alma. Also, check if the item should be hidden by
+                // Alma item policy code.
+                $show = (!$locData['suppress_from_publishing']
+                    && !in_array($itemPolicyCode, $hidePolicies)) ?? true;
 
                 if ($show) {
                     $fulUnit = $locData['fulfillment_unit'] ?: null;
@@ -132,7 +139,6 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                         ? $this->parseDate($date)
                         : null;
 
-    
                     // AK: Get the number of requests
                     $noOfRequests = 0;
                     if ($requested) {
@@ -195,7 +201,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                         'description' => $description ?? null,
                         // AK: Adding additional information
                         'library' => $library ?? null,
-                        'policy_code' => (string)$item->item_data->policy ?: null,
+                        'policy_code' => $itemPolicyCode,
                         'policy_desc' => (string)$item->item_data->policy
                             ->attributes()['desc'] ?: null,
                         'isRecall' => $isRecall ?? null,
