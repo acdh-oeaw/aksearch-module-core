@@ -97,10 +97,10 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
                 if ($this->getAuthManager()->supportsLibraryEmail()) {
                     $this->sendEmailToLibrary($request, $user);
                 }
-
-                // TODO: Forward to SUCCESS site!
-                return $this->forwardTo('MyResearch', 'Home');
-            } catch (AuthEmailNotVerifiedException $e) {
+                
+                // AK: Forward to welcome site. We use an extra parameter for that.
+                return $this->forwardTo('MyResearch', 'Home', ['create' => true]);
+            } catch (\VuFind\Exception\AuthEmailNotVerified $e) {
                 $this->sendFirstVerificationEmail($e->user);
                 return $this->redirect()->toRoute('myresearch-emailnotverified');
             } catch (AuthException $e) {
@@ -114,6 +114,84 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             $this->setUpAuthenticationFromRequest();
         }
         return $view;
+    }
+
+    /**
+     * Prepare and direct the home page where it needs to go
+     * AK: Redirect to welcome page if a user creates a new account.
+     *
+     * @return mixed
+     */
+    public function homeAction()
+    {
+        // Process login request, if necessary (either because a form has been
+        // submitted or because we're using an external login provider):
+        if ($this->params()->fromPost('processLogin')
+            || $this->getSessionInitiator()
+            || $this->params()->fromPost('auth_method')
+            || $this->params()->fromQuery('auth_method')
+        ) {
+            try {
+                if (!$this->getAuthManager()->isLoggedIn()) {
+                    $this->getAuthManager()->login($this->getRequest());
+                    // Return early to avoid unnecessary processing if we are being
+                    // called from login lightbox and don't have a followup action.
+                    if ($this->params()->fromPost('processLogin')
+                        && $this->inLightbox()
+                        && empty($this->getFollowupUrl())
+                    ) {
+                        return $this->getRefreshResponse();
+                    }
+                }
+            } catch (AuthException $e) {
+                $this->processAuthenticationException($e);
+            }
+        }
+
+        // Not logged in?  Force user to log in:
+        if (!$this->getAuthManager()->isLoggedIn()) {
+            // Allow bypassing of post-login redirect
+            if ($this->params()->fromQuery('redirect', true)) {
+                $this->setFollowupUrlToReferer();
+            }
+            return $this->forwardTo('MyResearch', 'Login');
+        }
+        // Logged in?  Forward user to followup action
+        // or default action (if no followup provided):
+        if ($url = $this->getFollowupUrl()) {
+            $this->clearFollowupUrl();
+
+            // AK: We got here from "Create account" so we show a welcome page
+            if ($this->params()->fromRoute('create', false)) {
+                return $this->forwardTo('MyResearch', 'Welcome');
+            }
+
+            // If a user clicks on the "Your Account" link, we want to be sure
+            // they get to their account rather than being redirected to an old
+            // followup URL. We'll use a redirect=0 GET flag to indicate this:
+            if ($this->params()->fromQuery('redirect', true)) {
+                return $this->redirect()->toUrl($url);
+            }
+        }
+
+        $config = $this->getConfig();
+        $page = isset($config->Site->defaultAccountPage)
+            ? $config->Site->defaultAccountPage : 'Favorites';
+
+        // Default to search history if favorites are disabled:
+        if ($page == 'Favorites' && !$this->listsEnabled()) {
+            return $this->forwardTo('Search', 'History');
+        }
+        return $this->forwardTo('MyResearch', $page);
+    }
+
+    /**
+     * AK: Show welcome page
+     *
+     * @return void
+     */
+    public function welcomeAction() {
+        return $this->createViewModel();
     }
 
     /**
@@ -494,6 +572,58 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         return $view;
     }
 
+    /**
+     * Account deletion
+     * AK: Delete user account in ILS if appropriate.
+     *
+     * @return mixed
+     */
+    public function deleteAccountAction()
+    {
+        // Force login:
+        if (!($user = $this->getUser())) {
+            return $this->forceLogin();
+        }
+
+        $config = $this->getConfig();
+        if (empty($config->Authentication->account_deletion)) {
+            throw new \VuFind\Exception\BadRequest();
+        }
+
+        $view = $this->createViewModel(['accountDeleted' => false]);
+        if ($this->formWasSubmitted('submit')) {
+            $csrf = $this->serviceLocator->get(\VuFind\Validator\Csrf::class);
+            if (!$csrf->isValid($this->getRequest()->getPost()->get('csrf'))) {
+                throw new \VuFind\Exception\BadRequest(
+                    'error_inconsistent_parameters'
+                );
+            } else {
+                // After successful token verification, clear list to shrink session:
+                $csrf->trimTokenList(0);
+            }
+            $user->delete(
+                $config->Authentication->delete_comments_with_user ?? true
+            );
+            
+            // AK: Delete user in ILS if possible
+            $catId = $user->cat_id ?: $user->cat_username;
+            if($this->getILS()->checkCapability('deleteUser', [$catId])) {
+                $delIlsAcc = (strcasecmp($config->Authentication->delete_ils_account,
+                    'no_delete') === 0) ? false : true;
+                if ($delIlsAcc) {
+                    $this->getILS()->getDriver()->deleteUser($catId);
+                }
+            }
+            
+            $view->accountDeleted = true;
+            $view->redirectUrl = $this->getAuthManager()->logout(
+                $this->getServerUrl('home')
+            );
+        } elseif ($this->formWasSubmitted('reset')) {
+            return $this->redirect()->toRoute('myresearch-profile');
+        }
+        return $view;
+    }
 
     /**
      * Execute the request
