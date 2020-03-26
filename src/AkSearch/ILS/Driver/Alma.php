@@ -719,6 +719,22 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
     }
 
     /**
+     * AK: Delete user with given user ID in Alma
+     *
+     * @param string $userId
+     * @return void
+     */
+    public function deleteUser($userId) {
+        if ($userId) {
+            // Execute the "delete user" request
+            $this->makeRequest('/users/'.urlencode($userId), [], [], 'DELETE');
+        } else {
+            throw new \VuFind\Exception\ILS('No user ID is given when trying ' .
+                'to delete the user account.');
+        }
+    }
+
+    /**
      * Get Patron Profile
      *
      * This is responsible for retrieving the profile for a specific patron.
@@ -740,6 +756,8 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             return [];
         }
         $profile = [
+            'cat_id'            => $patron['id'],
+            'cat_username'      => $patronId ?? null,
             'firstname'         => (isset($xml->first_name))
                 ? (string) $xml->first_name
                 : null,
