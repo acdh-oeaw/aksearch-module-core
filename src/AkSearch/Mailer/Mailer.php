@@ -135,8 +135,8 @@ class Mailer extends \VuFind\Mailer\Mailer
 
         // Convert all exceptions thrown by mailer into MailException objects:
         try {
-            // Send message
-            $message = $this->getNewMessage()
+            // AK: Send HTML message
+            $message = $this->getNewHtmlMessage()
                 ->addFrom($from)
                 ->addTo($recipients)
                 ->setBody($mimeMessage) // AK: Set mime message as body
@@ -157,4 +157,21 @@ class Mailer extends \VuFind\Mailer\Mailer
         }
     }
 
+    /**
+     * AK: Get new message for HTML
+     *
+     * @return \Zend\Mail\Message   A new message object for HTML
+     */
+    public function getNewHtmlMessage()
+    {
+        $message = new \Zend\Mail\Message();
+        $message->setEncoding('UTF-8');
+        $headers = $message->getHeaders();
+        $contentType = new \Zend\Mail\Header\ContentType();
+        $contentType->setType('text/html');
+        $contentType->addParameter('charset', 'UTF-8');
+        $headers->addHeader($contentType);
+        return $message;
+    }
+    
 }
