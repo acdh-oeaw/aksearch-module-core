@@ -1351,6 +1351,94 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
     }
 
     /**
+     * Get Patron Holds
+     * This is responsible for retrieving all holds by a specific patron.
+     * 
+     * AK: Fixed an error in key-value relation of the return array. The Alma MMS ID
+     * was assigned to the wrong key. See also:
+     * https://vufind.org/wiki/development:plugins:ils_drivers#getmyholds
+     * TODO: Pull request for VuFind Master code.
+     *
+     * @param array $patron The patron array from patronLogin
+     *
+     * @return mixed        Array of the patron's holds on success.
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
+    public function getMyHolds($patron)
+    {
+        $xml = $this->makeRequest(
+            '/users/' . $patron['id'] . '/requests',
+            ['request_type' => 'HOLD']
+        );
+        $holdList = [];
+        foreach ($xml as $request) {
+            $lastInterestDate = $request->last_interest_date
+                ? $this->dateConverter->convertToDisplayDate(
+                    'Y-m-dT', (string)$request->last_interest_date
+                ) : null;
+            $available = (string)$request->request_status === 'On Hold Shelf';
+            $lastPickupDate = null;
+            if ($available) {
+                $lastPickupDate = $request->expiry_date
+                    ? $this->dateConverter->convertToDisplayDate(
+                        'Y-m-dT', (string)$request->expiry_date
+                    ) : null;
+            }
+            $holdList[] = [
+                'create' => $this->dateConverter->convertToDisplayDate(
+                    'Y-m-dT', (string)$request->request_date
+                ),
+                'expire' => $lastInterestDate,
+                // AK: 'id' key is record ID (= Alma MMS ID), not request ID
+                'id' => (string)$request->mms_id,
+                'available' => $available,
+                'last_pickup_date' => $lastPickupDate,
+                'item_id' => (string)$request->mms_id,
+                'location' => (string)$request->pickup_location,
+                'processed' => $request->item_policy === 'InterlibraryLoan'
+                    && (string)$request->request_status !== 'Not Started',
+                'title' => (string)$request->title,
+                // AK: Adding values
+                'reqnum' => (string)$request->request_id,
+                'position' => (string)$request->place_in_queue,
+                'in_transit' => !$available,
+                'item_id' => (string)$request->item_id ?? null
+            ];
+        }
+        return $holdList;
+    }
+
+    /**
+     * Get Departments. Obtain a list of departments for use in limiting the
+     * reserves list.
+     * 
+     * AK: Not in use yet.
+     *
+     * @throws ILSException
+     * @return array An associative array with key = dept. ID, value = dept. name.
+     */
+    public function getDepartments()
+    {
+        return [];
+    }
+
+    /**
+     * Get Instructors. Obtain a list of instructors for use in limiting the
+     * reserves list.
+     * 
+     * AK: Not in use yet.
+     *
+     * @throws ILSException
+     * @return array An associative array with key = ID, value = name.
+     */
+    public function getInstructors()
+    {
+        // TODO
+        return [];
+    }
+
+    /**
      * Public Function which retrieves miscellaneous settings, among which are the
      * renew, hold and cancel settings from the driver ini file.
      *
