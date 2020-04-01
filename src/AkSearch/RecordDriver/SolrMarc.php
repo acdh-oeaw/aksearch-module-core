@@ -343,9 +343,11 @@ class SolrMarc extends SolrDefault
 
     /**
      * AK: Get all possible contributors grouped by role in the right order.
-     * TODO: Make that function shorter and cleaner! Implement a fallback to MarcXML!
+     * 
+     * TODO: Make that function shorter and cleaner if possible! Implement a fallback
+     * to MarcXML!
      *
-     * @return void
+     * @return array    An array with all contributors grouped by role
      */
     public function getContributorsByRole() {
         // Initialize return variable
@@ -375,59 +377,104 @@ class SolrMarc extends SolrDefault
         // Get secondary meeting authors
         $secMeetings = $this->fields['author2_meeting_NameRoleGnd_str_mv'] ?? null;
 
-        // Add primary authors to array
-		if ($primaryName) {
-            $contributors[$primaryRole][$primaryAuth] = $primaryName;
-        }
-        if ($corpName) {
-            $contributors[$corpRole][$corpAuth] = $corpName;
-        }
-        if ($meetingName) {
-            $contributors[$meetingRole][$meetingAuth] = $meetingName;
+        // Add primary person authors to array (values from Marc21 field 100)
+        if ($primaryName) {
+            $contributors[$primaryRole][] = [
+                'entity' => 'person',
+                'name' => $primaryName,
+                'role' => $primaryRole,
+                'auth' => $primaryAuth,
+                'primary' => true
+            ];
         }
 
-        // Add secondary authors to array
+        // Add primary corporation authors to array (values from Marc21 field 110)
+        if ($corpName) {
+            $contributors[$corpRole][] = [
+                'entity' => 'corporation',
+                'name' => $corpName,
+                'role' => $corpRole,
+                'auth' => $corpAuth,
+                'primary' => true
+            ];
+
+        }
+
+        // Add primary meeting authors to array (values from Marc21 field 111)
+        if ($meetingName) {
+            $contributors[$meetingRole][] = [
+                'entity' => 'meeting',
+                'name' => $meetingName,
+                'role' => $meetingRole,
+                'auth' => $meetingAuth,
+                'primary' => true
+            ];
+        }
+
+        // Add secondary person authors to array (values from Marc21 field 700)
         if ($secNames) {
             foreach ($secNames as $key => $value) {
-    			if (($key % 3) == 0) { // First of 3 values
+                if (($key % 3) == 0) { // First of 3 values
     				$name = $value;
     			} else if (($key % 3) == 1) { // Second of 3 values
     				$role = $value;
     			}  else if (($key % 3) == 2) { // Third and last of 3 values
-    				$gnd = $value;
+    				$auth = $value;
 
     				// We have all values now, add them to the return array:
-    				$contributors[$role][$gnd] = $name;
+    				$contributors[$role][] = [
+                        'entity' => 'person',
+                        'name' => $name,
+                        'role' => $role,
+                        'auth' => $auth,
+                        'primary' => false
+                    ];
     			}
-    		}
+            }
         }
+
+        // Add secondary corporation authors to array (values from Marc21 field 710)
         if ($secCorps) {
             foreach ($secCorps as $key => $value) {
-    			if (($key % 3) == 0) { // First of 3 values
+                if (($key % 3) == 0) { // First of 3 values
     				$name = $value;
     			} else if (($key % 3) == 1) { // Second of 3 values
     				$role = $value;
     			}  else if (($key % 3) == 2) { // Third and last of 3 values
-    				$gnd = $value;
+    				$auth = $value;
 
     				// We have all values now, add them to the return array:
-    				$contributors[$role][$gnd] = $name;
+    				$contributors[$role][] = [
+                        'entity' => 'corporation',
+                        'name' => $name,
+                        'role' => $role,
+                        'auth' => $auth,
+                        'primary' => false
+                    ];
     			}
-    		}
+            }
         }
+
+        // Add secondary meeting authors to array (values from Marc21 field 711)
         if ($secMeetings) {
             foreach ($secMeetings as $key => $value) {
-    			if (($key % 3) == 0) { // First of 3 values
+                if (($key % 3) == 0) { // First of 3 values
     				$name = $value;
     			} else if (($key % 3) == 1) { // Second of 3 values
     				$role = $value;
     			}  else if (($key % 3) == 2) { // Third and last of 3 values
-    				$gnd = $value;
+    				$auth = $value;
 
     				// We have all values now, add them to the return array:
-    				$contributors[$role][$gnd] = $name;
+    				$contributors[$role][] = [
+                        'entity' => 'meeting',
+                        'name' => $name,
+                        'role' => $role,
+                        'auth' => $auth,
+                        'primary' => false
+                    ];
     			}
-    		}
+            }
         }
 
         return $contributors;

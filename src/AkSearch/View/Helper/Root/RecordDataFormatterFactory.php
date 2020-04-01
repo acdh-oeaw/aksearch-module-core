@@ -258,33 +258,36 @@ class RecordDataFormatterFactory
             // should be displayed in the order we get them from the RecordDriver
             // function getContributorsByRole().
             $order = 0;
-            foreach ($data as $role => $values) {
-                $order++;
-                $result[] = [
-                    // The label for the table row. We use a translation prefix as
-                    // the translation of the roles are in a separate subfolder of
-                    // the languages folder (named "CreatorRoles").
-                    'label' => 'CreatorRoles::'.$role,
-                    // The values to display. This is an array in the form
-                    // ["authId" => "Contributor Name"]. The value of the array is
-                    // displayed.
-                    'values' => $values,
-                    'options' => [
-                        // The position/order where this entry should be displayed.
-                        'pos' => $options['pos'] + $order,
-                        // Indicates that we want to use a .phtml template
-                        'renderType' => 'RecordDriverTemplate',
-                        // The .phtml template to use
-                        'template' => 'data-authors.phtml',
-                        // Values that are passed to the template
-                        // TODO: Should we add some schema.org stuff here?
-                        'context' => [
-                            'role' => $role,
-                            'authId' => key($values)
+
+            foreach ($data as $role => $entries) {
+                
+                $values = [];
+                foreach ($entries as $entry) {
+                    $values[] = [$entry['auth'] => $entry['name']];
+                }
+
+                if (!empty($values)) {
+                    $order++;
+                    $result[] = [
+                        'label' => 'CreatorRoles::'.$role,
+                        'values' => $values,
+                        'options' => [
+                            // The position/order where this entry should be displayed.
+                            'pos' => $options['pos'] + $order,
+                            // Indicates that we want to use a .phtml template
+                            'renderType' => 'RecordDriverTemplate',
+                            // The .phtml template to use
+                            'template' => 'data-authors.phtml',
+                            // Values that are passed to the template
+                            // TODO: Should we add some schema.org stuff here?
+                            'context' => [
+                                'role' => $role
+                            ]
                         ]
-                    ]
-                ];
+                    ];
+                }
             }
+
             return $result;
         };
     }
