@@ -61,6 +61,7 @@ class SolrMarc extends SolrDefault
         getAllSubjects as protected getAllSubjectsFromXml;
         hasChilds as protected hasChildsFromXml;
         hasParents as protected hasParentsFromXml;
+        getSeriesVolume as protected getSeriesVolumeFromXml;
         getSummarizedHoldings as protected getSummarizedHoldingsFromXml;
     }
 
@@ -342,6 +343,30 @@ class SolrMarc extends SolrDefault
     }
 
     /**
+     * AK: Get names of all contributor
+     * 
+     * TODO: Fallback to MarcXML
+     *
+     * @return array
+     */
+    public function getContributors() {
+        // Primary authors
+        $primPers = isset($this->fields['author']) ? (array)$this->fields['author'] : [];
+        $primCorp = isset($this->fields['author_corporate']) ? (array)$this->fields['author_corporate'] : [];
+        $primMeet = isset($this->fields['author_meeting_txt']) ? (array)$this->fields['author_meeting_txt'] : [];
+        // Secondary authors
+        $secPers = isset($this->fields['author2']) ? (array)$this->fields['author2'] : [];
+        $secCorp = isset($this->fields['author2_corporate_txt_mv']) ? (array)$this->fields['author2_corporate_txt_mv'] : [];
+        $secMeet = isset($this->fields['author2_meeting_txt_mv']) ? (array)$this->fields['author2_meeting_txt_mv'] : [];
+        // Merge array
+        $merged = array_merge($primPers, $primCorp, $primMeet, $secPers,$secCorp,
+            $secMeet);
+            
+        // Return merged array
+        return $merged;
+    }
+
+    /**
      * AK: Get all possible contributors grouped by role in the right order.
      * 
      * TODO: Make that function shorter and cleaner if possible! Implement a fallback
@@ -587,11 +612,13 @@ class SolrMarc extends SolrDefault
                     $parentRaw['subTitle'], $parentRaw['partNo'],
                     $parentRaw['partName']], array($this, 'filterCallback'))
                 );
-
+                // Get the bibl. level
+                $level = $parentRaw['level'] ?? null;
                 // Add necessary information to return string
                 $parentsCons[$key]['id'] = $parentRaw['id'];
                 $parentsCons[$key]['title'] = $title;
                 $parentsCons[$key]['volNo'] = $volNo;
+                $parentsCons[$key]['level'] = $level;
             }
         }
         return empty($parentsCons) ? null : $parentsCons;
@@ -692,6 +719,28 @@ class SolrMarc extends SolrDefault
         }
 
         return empty($result) ? null : $result;
+    }
+
+    /**
+     * AK: Get a volume number if available. Returns volume numbers of series items
+     *     or multivolume items. For volume numbers of journal articles or chapters,
+     *     see getContainerVolume().
+     *
+     * @return string|null   The volume number of a monographic item or null
+     */
+    public function getSeriesVolume() {
+        $volNo = null;
+        // Check if we have a "part" record. If not, the current record could be
+        // a volume from a series or multivolume work.
+        if (strpos(strtolower($this->getBibliographicLevel()), 'part') === false) {
+            $volNos = $this->fields['volumeNo_str_mv'] ?? null;
+            $volNo = !empty($volNos) ? $volNos[0] : null;
+        }
+        // Fallback to MarcXML
+        if (!$volNo) {
+            $volNo = $this->getSeriesVolumeFromXml();
+        }
+        return $volNo;        
     }
 
     /**

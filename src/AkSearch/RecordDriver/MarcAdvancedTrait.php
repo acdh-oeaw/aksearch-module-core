@@ -295,7 +295,9 @@ trait MarcAdvancedTrait
 
     /**
      * AK: Get a volume number if available. This is the value from datafield VAR,
-     *     subfield v
+     *     subfield v. Returns volume numbers for journal articles or chapters. For
+     *     volume numbers of series items or multivolume items, see getSeriesVolume()
+     *     below.
      *
      * @return string   The value from datafield VAR, subfield v
      */
@@ -358,6 +360,24 @@ trait MarcAdvancedTrait
             $endPage = (count($arr)>1) ? trim($arr[1]) : null;
         }
         return $endPage;
+    }
+
+    /**
+     * AK: Get a volume number if available. Returns volume numbers of series items
+     *     or multivolume items. For volume numbers of journal articles or chapters,
+     *     see getContainerVolume() above.
+     *
+     * @return string|null   The volume number of a monographic item or null
+     */
+    public function getSeriesVolume() {
+        $volNo = null;
+        // Check if we have a "part" record. If not, the current record could be
+        // a volume from a series or multivolume work.
+        if (strpos(strtolower($this->getBibliographicLevel()), 'part') === false) {
+            $volNos = $this->getFieldArray('PNT', ['7', '8', '2', '4'], false) ?: null;
+            $volNo = !empty($volNos) ? $volNos[0] : null;
+        }
+        return $volNo;
     }
     
     /**

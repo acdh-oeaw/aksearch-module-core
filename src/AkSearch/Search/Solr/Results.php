@@ -28,6 +28,9 @@
 
 namespace AkSearch\Search\Solr;
 
+// AK: Use custom UrlQueryHelperFactory
+use AkSearch\Search\Factory\UrlQueryHelperFactory;
+
 /**
  * AK: Extending Solr Search Results.
  *
@@ -201,4 +204,23 @@ class Results extends \VuFind\Search\Solr\Results
         return $list;
     }
 
+    /**
+     * Get the URL helper for this object.
+     * 
+     * AK: Use custom UrlQueryHelperFactory
+     *
+     * @return \AkSearch\Search\UrlQueryHelper
+     */
+    public function getUrlQuery()
+    {
+        // Set up URL helper:
+        if (!isset($this->helpers['urlQuery'])) {
+            // AK: Use custom UrlQueryHelperFactory
+            $factory = new UrlQueryHelperFactory();
+            $this->helpers['urlQuery'] = $factory->fromParams(
+                $this->getParams(), $this->getUrlQueryHelperOptions()
+            );
+        }
+        return $this->helpers['urlQuery'];
+    }
 }
