@@ -1097,7 +1097,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                 'publication_year' => $userLoan['publication_year'] ?? null,
                 'volume' => $userLoan['description'] ?? null,
                 'institution_name' => $userLoan['library_code'] ?? null,
-                'borrowingLocation' => $userLoan['location_code'] ?? null
+                'borrowingLocation' => $userLoan['borrowing_location_code'] ?? null
             );
         }, $userLoans['transactions']);
 
@@ -1385,12 +1385,24 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                         'Y-m-dT', (string)$request->expiry_date
                     ) : null;
             }
+
+            // AK: Get the place in the request queue. 0 means that the given user
+            // is the first in the queue.
+            $placeInQueue = (int)$request->place_in_queue ?? 0;
+
+            // AK: Requested item is in transit when the request status is
+            // 'In Process' and the place in the request queue is 0.
+            //$request->request_status = 'Not Started';
+            $inTransit = (string)$request->request_status === 'In Process'
+                && $placeInQueue === 0;
+
             $holdList[] = [
                 'create' => $this->dateConverter->convertToDisplayDate(
                     'Y-m-dT', (string)$request->request_date
                 ),
                 'expire' => $lastInterestDate,
                 // AK: 'id' key is record ID (= Alma MMS ID), not request ID
+                // TODO: Change in VuFind master code
                 'id' => (string)$request->mms_id,
                 'available' => $available,
                 'last_pickup_date' => $lastPickupDate,
@@ -1401,9 +1413,9 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                 'title' => (string)$request->title,
                 // AK: Adding values
                 'reqnum' => (string)$request->request_id,
-                'position' => (string)$request->place_in_queue,
-                'in_transit' => !$available,
-                'item_id' => (string)$request->item_id ?? null
+                'position' => $placeInQueue,
+                'item_id' => (string)$request->item_id ?? null,
+                'in_transit' => $inTransit,
             ];
         }
         return $holdList;
@@ -1610,6 +1622,67 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
         }
 
         return $purgeDate;
+    }
+
+    /**
+     * Renew loans via Alma API.
+     * 
+     * AK: Fixed wrong creation of return array. It only returned one renewal.
+     * TODO: Fix in VuFind master code.
+     *
+     * @param array $renewDetails An array with the IDs of the loans returned by
+     *                            getRenewDetails and the patron information
+     *                            returned by patronLogin.
+     *
+     * @return array[] An array with the renewal details and a success or error
+     *                 message.
+     *
+     */
+    public function renewMyItems($renewDetails)
+    {
+        $returnArray = [];
+        $patronId = $renewDetails['patron']['id'];
+
+        foreach ($renewDetails['details'] as $loanId) {
+            // Create an empty array that holds the information for a renewal
+            $renewal = [];
+
+            try {
+                // POST the renewals to Alma
+                $apiResult = $this->makeRequest(
+                    '/users/' . $patronId . '/loans/' . $loanId . '/?op=renew',
+                    [],
+                    [],
+                    'POST'
+                );
+
+                // Add information to the renewal array
+                // AK: Fix creation of return array
+                $blocks = false;
+                $renewal['success'] = true;
+                $renewal['new_date'] = $this->parseDate(
+                    (string)$apiResult->due_date,
+                    true
+                );
+                //$renewal[$loanId]['new_time'] = ;
+                $renewal['item_id'] = (string)$apiResult->loan_id;
+                $renewal['sysMessage'] = 'renew_success';
+
+                // Add the renewal to the return array
+                // AK: Fix creation of return array
+                $returnArray['details'][$loanId] = $renewal;
+            } catch (ILSException $ilsEx) {
+                // Add the empty renewal array to the return array
+                $returnArray['details'] = $renewal;
+
+                // Add a message that can be translated
+                $blocks[] = 'renew_fail';
+            }
+        }
+
+        $returnArray['blocks'] = $blocks;
+
+        return $returnArray;
     }
 
     /**
