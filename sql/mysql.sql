@@ -30,6 +30,7 @@ CREATE TABLE `loans` (
   `return_date`datetime DEFAULT NULL,
   `library_code` varchar(255) DEFAULT NULL,
   `location_code` varchar(50) DEFAULT NULL,
+  `borrowing_location_code` varchar(255) DEFAULT NULL,
   `call_no` varchar(100) DEFAULT NULL,
   `barcode` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`),
