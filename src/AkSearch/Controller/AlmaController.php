@@ -182,6 +182,8 @@ class AlmaController extends \VuFind\Controller\AlmaController
                 $loan['library_code'] = $requestBodyJson->item_loan->library->value;
                 $loan['location_code'] =
                     $requestBodyJson->item_loan->location_code->value;
+                $loan['borrowing_location_code'] =
+                    $requestBodyJson->item_loan->circ_desk->value;
                 $loan['call_no'] = $requestBodyJson->item_loan->call_number;
                 $loan['barcode'] = $requestBodyJson->item_loan->item_barcode;
 
