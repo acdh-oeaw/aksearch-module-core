@@ -742,7 +742,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
      * AK: Setting some user information to the object cache without using the
      *     cache-key-generator from \VuFind\ILS\Driver\CacheTrait as this adds
      *     the class name to the cache-key which makes it hard to use the cached
-     *     data from other classes.
+     *     data from other classes. Using cat_username instead of id from patron.
      *
      * @param array $patron The patron array
      *
