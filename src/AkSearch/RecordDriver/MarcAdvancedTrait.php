@@ -43,6 +43,8 @@ trait MarcAdvancedTrait
     use \VuFind\RecordDriver\MarcBasicTrait {
         getShortTitle as protected getShortTitleFromMarcBasicTrait;
         getSubtitle as protected getSubtitleFromMarcBasicTrait;
+        getPhysicalDescriptions
+            as protected getPhysicalDescriptionsFromMarcBasicTrait;
     }
     use \VuFind\RecordDriver\MarcAdvancedTrait {
         \VuFind\RecordDriver\MarcAdvancedTrait::getNewerTitles insteadof
@@ -73,7 +75,7 @@ trait MarcAdvancedTrait
                     : null;
                 // Use only subject terms (designated by "s"), not e. g. person names
                 if ($subjectType689 == 's' || $subjectType689 == 'S') {
-                    $subfields689 = $subjectField689->getSubfields('[axvyzbcg]',
+                    $subfields689 = $subjectField689->getSubfields('[axvtyzbcg]',
                         true);
                     $subfieldData689 = [];
                     foreach($subfields689 as $subfield689) {
@@ -107,7 +109,7 @@ trait MarcAdvancedTrait
     /**
      * AK: This function is used to get subjects for keyword chains.
      *     We get all subject headings associated with this record. Keyword chains
-     *     are buildt from 689 fields which is a specific field used by
+     *     are built from 689 fields which is a specific field used by
      *     german-speaking libraries. We also have field 982 which is unique for some
      *     austrian libraries.
      *     TODO: Maybe we could use config to specify the fields that should be used
@@ -131,7 +133,7 @@ trait MarcAdvancedTrait
             $ind2 = $subjectField->getIndicator(2);
 
             if (is_numeric($ind1) && is_numeric($ind2)) {
-                $subfields = $subjectField->getSubfields('[axvyzbcg]', true);
+                $subfields = $subjectField->getSubfields('[axvtyzbcg]', true);
                 $subfieldData = [];
                 foreach($subfields as $subfield) {
                     $subfieldData[] = $subfield->getData();
@@ -565,6 +567,18 @@ trait MarcAdvancedTrait
         }
 
         return $results;
+    }
+
+
+    /**
+     * AK: Get physical description separated by colon
+     *
+     * @return array
+     */
+    public function getPhysicalDescriptions()
+    {
+        return $this->getFieldArray('300', ['a', 'b', 'c', 'e', 'f', 'g'], true,
+            '; ');
     }
 
     /**

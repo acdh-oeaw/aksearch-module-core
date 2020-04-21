@@ -115,7 +115,14 @@ class RecordDataFormatterFactory
         $spec->setTemplateLine(
             'Related Items', 'getAllRecordLinks', 'data-allRecordLinks.phtml'
         );
-        $spec->setLine('Notes', 'getGeneralNotes');
+
+        // AK: Added physical description (Marc21 field 300)
+        $spec->setTemplateLine('Physical Description', 'getPhysicalDescriptions',
+            'data-bulletList.phtml');
+
+        // AK: Using template line instead of a default line
+        $spec->setTemplateLine('Notes', 'getGeneralNotes', 'data-bulletList.phtml');
+
         $spec->setLine('Production Credits', 'getProductionCredits');
         $spec->setLine('ISBN', 'getISBNs');
         $spec->setLine('ISSN', 'getISSNs');
@@ -237,6 +244,15 @@ class RecordDataFormatterFactory
         $spec->setTemplateLine(
             'Related Items', 'getAllRecordLinks', 'data-allRecordLinks.phtml'
         );
+
+        // AK: Added physical description (Marc21 field 300)
+        $spec->setTemplateLine('Physical Description', 'getPhysicalDescriptions',
+            'data-bulletList.phtml');
+
+        // AK: Added notes (Marc21 field 500)
+        $spec->setTemplateLine('Notes', 'getGeneralNotes', 'data-bulletList.phtml');
+
+        
         $spec->setTemplateLine('Tags', true, 'data-tags.phtml');
         
         return $spec->getArray();
@@ -303,8 +319,11 @@ class RecordDataFormatterFactory
         $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
         $spec->setLine('TitleAlt', 'getTitleAlt');
         $spec->setTemplateLine('Summary', true, 'data-summary.phtml');
-        $spec->setLine('Item Description', 'getGeneralNotes');
-        $spec->setLine('Physical Description', 'getPhysicalDescriptions');
+        // AK: Moved notes to core details
+        //$spec->setTemplateLine('Notes', 'getGeneralNotes', 'data-bulletList.phtml');
+        // AK: Moved physical description to core details
+        //$spec->setTemplateLine('Physical Description', 'getPhysicalDescriptions',
+        //    'data-bulletList.phtml');
         $spec->setLine('Publication Frequency', 'getPublicationFrequency');
         $spec->setLine('Playing Time', 'getPlayingTimes');
         $spec->setLine('Format', 'getSystemDetails');
