@@ -45,6 +45,16 @@ $config = [
     ],
     'vufind' => [
         'plugin_managers' => [
+            'ajaxhandler' => [
+                'factories' => [
+                    'AkSearch\AjaxHandler\GetSlideFacetTemplate' =>
+                        'AkSearch\AjaxHandler\GetSlideFacetTemplateFactory'
+                ],
+                'aliases' => [
+                    'getSlideFacetTemplate' =>
+                        'AkSearch\AjaxHandler\GetSlideFacetTemplate'
+                ]
+            ],
             'auth' => [
                 'factories' => [
                     'AkSearch\Auth\AlmaDatabase' => 'VuFind\Auth\ILSFactory'
@@ -75,6 +85,14 @@ $config = [
                 ],
                 'aliases' => [
                     'VuFind\ILS\Driver\Alma' => 'AkSearch\ILS\Driver\Alma'
+                ]
+            ],
+            'recommend' => [
+                'factories' => [
+                    'AkSearch\Recommend\SideFacets' => 'VuFind\Recommend\SideFacetsFactory'
+                ],
+                'aliases' => [
+                    'sidefacets' => 'AkSearch\Recommend\SideFacets'
                 ]
             ],
             'recorddriver' => [
