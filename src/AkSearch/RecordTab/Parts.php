@@ -72,8 +72,34 @@ class Parts extends \VuFind\RecordTab\AbstractBase {
         $childs = $this->getRecordDriver()->tryMethod('getChilds');
 
         if ($childs) {
-            $childsByLevel = [];
+            // Arrays for sorting
+            $pubYears = array_map(
+                function($pubYear) {
+                    return str_replace(array('[', ']'), '', $pubYear);
+                },
+                array_column($childs, 'pubYear')
+            );
+            $volNos = array_column($childs, 'volNo');
+            $issNos = array_column($childs, 'issNo');
+            $orderNos = array_column($childs, 'orderNo');
+
+            // Sort childs array by multiple aspects
+            array_multisort (
+                $pubYears, SORT_DESC,
+                $volNos, SORT_DESC,
+                $issNos, SORT_DESC,
+                $orderNos, SORT_ASC,
+                $childs
+            );
+
+            // Counter for total no. of elements
+            $totalNoOfChilds = 0;
+
+            $childsGrouped = [];
             foreach ($childs as $child) {
+                // Count total no. of elements
+                $totalNoOfChilds++;
+
                 // Construct title
                 $title = $child['partTitle'] ?? implode(
                     ' : ',
@@ -85,8 +111,15 @@ class Parts extends \VuFind\RecordTab\AbstractBase {
                 $title = empty(trim($title)) ? 'NoTitle' : $title;
                 $level = $child['level'] ?? 'unknown';
 
-                // Create an array grouped by level
-                $childsByLevel[$level][] = [
+                // Merge all non-"Part" levels (= Monograph, Multivol., Serial, ...)
+                // to a "Volume" level
+                $level = (strpos(strtolower($level), 'part') === false)
+                    ? 'volume'
+                    : $level;
+
+                $childsGrouped[$level][$child['pubYear'] ?? 'nopubyear']
+                    [$child['volNo'] ?? 'novolno'][$child['issNo'] ?? 'noissno'][] =
+                [
                     'id' => $child['id'],
                     'type' => $child['type'] ?? null,
                     'title' => $title,
@@ -96,33 +129,71 @@ class Parts extends \VuFind\RecordTab\AbstractBase {
                     'issNo' => $child['issNo'] ?? null,
                     'pgNos' => $child['pgNos'] ?? null,
                     'orderNo' => $child['orderNo'] ?? null,
+                    'depth' => $child['depth'] ?? null,
+                    'marker' => $child['marker'] ?? null,
                     'fullTextUrl' => $child['fullTextUrl'] ?? null
                 ];
             }
 
-            // Group each level-subarray
-            foreach ($childsByLevel as $level => $child) {
-                // Arrays for sorting
-                $pubYears = array_column($child, 'pubYear');
-                $volNos = array_column($child, 'volNo');
-                $issNos = array_column($child, 'issNo');
-                $orderNos = array_column($child, 'orderNo');
+            $result['childs'] = $childsGrouped;
+            $result['total_no_of_childs'] = $totalNoOfChilds;
 
-                // Sort by multiple aspects
-                array_multisort (
-                    $pubYears, SORT_DESC,
-                    $volNos, SORT_DESC,
-                    $issNos, SORT_DESC,
-                    $orderNos, SORT_DESC,
-                    $child
-                );
-
-                // Add to result array
-                $result[$level] = $child;
-            }
         }
 
         return (empty($result)) ? null : $result;
+    }
+
+    // TODO: Find a simpler way to flatten the array!
+    public function getFlatChilds($childs, $level = null) {
+        $result = [];
+        $flatChilds = [];
+        $totalNoOfChilds = 0;
+        $yearNoOfChilds = 0;
+        $volNoOfChilds = 0;
+        $issNoOfChilds = 0;
+
+        foreach ($childs as $year => $years) {
+            $yearNoOfChilds = 0;
+            foreach ($years as $volNo => $vols) {
+                $volNoOfChilds = 0;
+                foreach ($vols as $issNo => $isss) {
+                    $issNoOfChilds = 0;
+                    foreach ($isss as $issNo => $iss) {
+                        $totalNoOfChilds++;
+                        if ($level == 'year') {
+                            $yearNoOfChilds++;
+                            $flatChilds[$year][] = $iss;
+                        } else if ($level == 'vol') {
+                            $volNoOfChilds++;
+                            $flatChilds[$year.'_'.$volNo][] = $iss;
+                        } else if ($level == 'iss') {
+                            $issNoOfChilds++;
+                            $flatChilds[$year.'_'.$volNo.'_'.$issNo][] = $iss;
+                        } else if ($level == 'none') {
+                            $flatChilds[] = $iss;
+                        }
+                    }
+                    if ($level == 'iss') {
+                        $flatChilds[$year.'_'.$volNo.'_'.$issNo]['no_of_childs'] = $issNoOfChilds;
+                    }
+                }
+                if ($level == 'vol') {
+                    $flatChilds[$year.'_'.$volNo]['no_of_childs'] = $volNoOfChilds;
+                }
+            }
+            if ($level == 'year') {
+                $flatChilds[$year]['no_of_childs'] = $yearNoOfChilds;
+            }
+        }
+
+        $result['childs'] = $flatChilds;
+        $result['total_no_of_childs'] = $totalNoOfChilds;
+        
+        return ($result['childs'] != null && !empty($result['childs'])) ? $result : $childs;
+    }
+
+    public function getBibliographicLevel() {
+        return $this->getRecordDriver()->tryMethod('getBibliographicLevel') ?? null;
     }
 
     /**

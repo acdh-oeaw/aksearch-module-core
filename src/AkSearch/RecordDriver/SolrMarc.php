@@ -650,60 +650,64 @@ class SolrMarc extends SolrDefault
         if ($solr) {
             $defaultSolrValues = ['NoRemainder', 'NoPartName', 'NoEdt', 'NoYear',
                 'NoRelPart', 'NoEnumNo', 'NoForm', 'NoLevel', 'NoVolNo', 'NoIssNo',
-                'NoPg', 'NoOrderNo', 'NoUrl', 'NoAc', 'NoId'];
+                'NoPg', 'NoOrderNo', 'NoDepth', 'NoUrl', 'NoMarker', 'NoAc', 'NoId'];
 
             foreach ($solr as $key => $value) {
-    			if (($key % 16) == 0) { // First of 16 values
+    			if (($key % 18) == 0) { // First of 18 values
     				$title = (in_array($value, $defaultSolrValues)) ? null : $value;
-    			} else if (($key % 16) == 1) { // Second of 16 values
+    			} else if (($key % 18) == 1) { // Second of 18 values
     				$subTitle = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-    			} else if (($key % 16) == 2) { // Third of 16 values
+    			} else if (($key % 18) == 2) { // Third of 18 values
                     $partTitle = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 3) {
+                } else if (($key % 18) == 3) {
                     $edition = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 4) {
+                } else if (($key % 18) == 4) {
                     $pubYear = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 5) {
+                } else if (($key % 18) == 5) {
                     $relatedPart = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 6) {
+                } else if (($key % 18) == 6) {
                     $enumeration = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 7) {
+                } else if (($key % 18) == 7) {
                     $form = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 8) {
+                } else if (($key % 18) == 8) {
                     $level = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 9) {
+                } else if (($key % 18) == 9) {
                     $volNo = (in_array($value, $defaultSolrValues)) ? null : $value;
-                } else if (($key % 16) == 10) {
+                } else if (($key % 18) == 10) {
                     $issNo = (in_array($value, $defaultSolrValues)) ? null : $value;
-                } else if (($key % 16) == 11) {
+                } else if (($key % 18) == 11) {
                     $pgNos = (in_array($value, $defaultSolrValues)) ? null : $value;
-                } else if (($key % 16) == 12) {
+                } else if (($key % 18) == 12) {
                     $orderNo = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 13) {
+                } else if (($key % 18) == 13) {
+                    $depth = (in_array($value, $defaultSolrValues)) ? null : $value;
+                } else if (($key % 18) == 14) {
                     $fullTextUrl = (in_array($value, $defaultSolrValues))
                         ? null
                         : $value;
-                } else if (($key % 16) == 14) {
+                } else if (($key % 18) == 15) {
+                    $marker = (in_array($value, $defaultSolrValues)) ? null : $value;
+                } else if (($key % 18) == 16) {
                     $acNo = (in_array($value, $defaultSolrValues)) ? null : $value;
-                } else if (($key % 16) == 15) { // Sixteenth and last of 16 values
+                } else if (($key % 18) == 17) { // Eighteenth and last of 18 values
                     $id = (in_array($value, $defaultSolrValues)) ? null : $value;
 
                     // We have all values now, add them to the return array:
@@ -712,8 +716,9 @@ class SolrMarc extends SolrDefault
                         'pubYear' => $pubYear, 'relatedPart' => $relatedPart,
                         'enumeration' => $enumeration, 'form' => $form,
                         'level' => $level, 'volNo' => $volNo, 'issNo' => $issNo,
-                        'pgNos' => $pgNos, 'orderNo' => $orderNo,
-                        'fullTextUrl' => $fullTextUrl, 'acNo' => $acNo, 'id' => $id];
+                        'pgNos' => $pgNos, 'orderNo' => $orderNo, 'depth' => $depth,
+                        'fullTextUrl' => $fullTextUrl, 'marker' => $marker,
+                        'acNo' => $acNo, 'id' => $id];
                 }
     		}
         }
