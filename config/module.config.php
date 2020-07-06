@@ -11,12 +11,14 @@ $config = [
     'controllers' => [
         'factories' => [
             'AkSearch\Controller\AlmaController' => 'VuFind\Controller\AbstractBaseFactory',
+            'AkSearch\Controller\BrowseController' => 'VuFind\Controller\AbstractBaseWithConfigFactory',
             'AkSearch\Controller\InstallController' => 'VuFind\Controller\AbstractBaseFactory',
             'AkSearch\Controller\MyResearchController' => 'VuFind\Controller\AbstractBaseFactory',
             'AkSearch\Controller\SearchController' => 'VuFind\Controller\AbstractBaseFactory'
         ],
         'aliases' => [
             'VuFind\Controller\AlmaController' => 'AkSearch\Controller\AlmaController',
+            'VuFind\Controller\BrowseController' => 'AkSearch\Controller\BrowseController',
             'VuFind\Controller\InstallController' => 'AkSearch\Controller\InstallController',
             'VuFind\Controller\MyResearchController' => 'AkSearch\Controller\MyResearchController',
             'VuFind\Controller\SearchController' => 'AkSearch\Controller\SearchController'
