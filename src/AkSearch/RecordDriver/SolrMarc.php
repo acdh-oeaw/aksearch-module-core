@@ -284,6 +284,8 @@ class SolrMarc extends SolrDefault
     /**
      * AK: Get subject terms from all corresponding Solr fields. As a fallback, get
      * subjects from MarcXML.
+     * 
+     * TODO: Add Solr fields via a config instead of hard coded!
      *
      * @return array|null   All subject terms as an array or null
      */
@@ -291,13 +293,13 @@ class SolrMarc extends SolrDefault
     {
         $subjects = array_unique(
             array_merge(
-                $this->fields['subject_txtF_mv'] ?? [],
-                $this->fields['subjectAkTopic_txt_mv'] ?? [],
-                $this->fields['subjectAkGeogr_txt_mv'] ?? [],
-                $this->fields['subjectAkPerson_txt_mv'] ?? [],
-                $this->fields['subjectAkCorporation_txt_mv'] ?? [],
-                $this->fields['subjectAkForm_txt_mv'] ?? [],
-                $this->fields['subjectAkEra_txt_mv'] ?? []
+                $this->fields['subjectChainTopic_txt_mv'] ?? [],
+                $this->fields['subjectAkTopic0_txt_mv'] ?? [],
+                $this->fields['subjectAkGeogr0_txt_mv'] ?? [],
+                $this->fields['subjectAkPerson0_txt_mv'] ?? [],
+                $this->fields['subjectAkCorporation0_txt_mv'] ?? [],
+                $this->fields['subjectAkForm0_txt_mv'] ?? [],
+                $this->fields['subjectAkEra0_txtF_mv'] ?? []
             )
         );
         if (empty($subjects)) {
