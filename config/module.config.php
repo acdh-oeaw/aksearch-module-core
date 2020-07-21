@@ -37,12 +37,14 @@ $config = [
         'factories' => [
             'AkSearch\Auth\Manager' => 'VuFind\Auth\ManagerFactory',
             'AkSearch\ILS\Logic\Holds' => 'VuFind\ILS\Logic\LogicFactory',
-            'AkSearch\Mailer\Mailer' => 'VuFind\Mailer\Factory'
+            'AkSearch\Mailer\Mailer' => 'VuFind\Mailer\Factory',
+            'AkSearch\Search\History' => 'AkSearch\Search\HistoryFactory'
         ],
         'aliases' => [
             'VuFind\Auth\Manager' => 'AkSearch\Auth\Manager',
             'VuFind\ILS\HoldLogic' => 'AkSearch\ILS\Logic\Holds',
-            'VuFind\Mailer' => 'AkSearch\Mailer\Mailer'
+            'VuFind\Mailer' => 'AkSearch\Mailer\Mailer',
+            'VuFind\Search\History' => 'AkSearch\Search\History'
         ],
     ],
     'vufind' => [
