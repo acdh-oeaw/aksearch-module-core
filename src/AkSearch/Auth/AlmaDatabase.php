@@ -131,7 +131,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
     }
 
     /**
-     * Attempt to authenticate the current user.  Throws exception if login fails.
+     * Attempt to authenticate the current user. Throws exception if login fails.
      * AK: Check if user exists in VuFind database AND in Alma
      *
      * @param Request $request Request object containing account credentials.
@@ -177,7 +177,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
     }
 
     /**
-     * AK: Change userdata in Alma
+     * AK: Change userdata in Alma and in VuFind database
      *
      * @param array              $patron  Patron information
      * @param \Zend\Http\Request $request Request object containing form data
@@ -185,7 +185,48 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
      * @return void
      */
     public function changeUserdata($patron, $request) {
-        return $this->almaDriver->changeUserdata($patron, $request);
+        // Collect POST parameters from request
+        $params = $this->collectParamsFromRequest($request);
+
+        // Get the user table
+        $userTable = $this->getUserTable();
+
+        // Invalid Email Check
+        $validator = new \Zend\Validator\EmailAddress();
+        if (!$validator->isValid($params['email'])) {
+            throw new AuthException('Email address is invalid');
+        }
+
+        // Check if Email is on whitelist (if applicable)
+        if (!$this->emailAllowed($params['email'])) {
+            throw new AuthException('change_userdata_email_domain_blocked');
+        }
+
+        // Make sure we have a unique email
+        if ($userTable->getByEmail($params['email'])) {
+            throw new AuthException('That email address is already used');
+        }
+
+        // If we got this far, the data should be valid and we can get the user row
+        // and change its data.
+        $user = $userTable->getByCatalogId($patron['id']);
+        if ($user) {
+            try {
+                // Change user data
+                $user->email = $params['email'];
+                $user->save();
+            } catch (\Exception $e) {
+                throw new AuthException('change_userdata_error');
+            }
+        } else {
+            throw new AuthException('change_userdata_user_not_found');
+        }
+
+        // If we got this far, update the account in Alma, but only if we are not in
+        // privacy mode
+        if (!$this->getConfig()->Authentication->privacy) {
+            $this->almaDriver->changeUserdata($patron, $request);
+        }
     }
 
     /**

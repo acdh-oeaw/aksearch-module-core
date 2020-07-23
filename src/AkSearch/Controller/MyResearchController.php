@@ -232,15 +232,18 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
 
             // If form was submitted
             if ($this->formWasSubmitted('submit', $view->useRecaptcha)) {
+                try {
+                    // Change userdata for the particular auth method
+                    $this->getAuthManager()->changeUserdata($patron, $request);
 
-                // Change userdata for the particular auth method
-                $this->getAuthManager()->changeUserdata($patron, $request);
-
-                // If we get this far show a success message
-                $this->flashMessenger()->addMessage(
-                    'change_userdata_success',
-                    'success'
-                );
+                    // If we get this far show a success message
+                    $this->flashMessenger()->addMessage(
+                        'change_userdata_success',
+                        'success'
+                    );
+                } catch (AuthException $e) {
+                    $this->flashMessenger()->addMessage($e->getMessage(), 'error');
+                }
             }
 
             // Obtain user information from ILS. Do this after form submission so

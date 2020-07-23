@@ -47,7 +47,7 @@ class Manager extends \VuFind\Auth\Manager
      * @return void
      */
     public function changeUserdata($patron, $request) {
-        return $this->getAuth()->changeUserdata($patron, $request);
+        $this->getAuth()->changeUserdata($patron, $request);
     }
 
     /**
