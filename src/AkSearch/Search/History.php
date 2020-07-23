@@ -67,18 +67,29 @@ class History extends \VuFind\Search\History
 
     /**
      * Get a list of scheduling options (empty list if scheduling disabled).
-     * AK: Also return emtpy list if permission is not granted to show the options.
+     * AK: Also return emtpy list if permission is not granted to show the options,
+     * but always allow if called from command line.
      *
      * @return array
      */
     public function getScheduleOptions()
     {
-        // AK: Check if permission for showing the schedule options is granted
-        $hasPermission = $this->authService->isGranted($this->config->Account
-            ->scheduled_search_permission);
+        // AK: Check if permission for showing the schedule options is granted. If
+        // config "scheduled_search_permission" is not set or has an empty value,
+        // permission is always granted as this is the default VuFind behaviour.
+        $permissionConfig = $this->config->Account->scheduled_search_permission
+            ?? null
+            ?: null;
+        $hasPermission = ($permissionConfig)
+            ? $this->authService->isGranted($permissionConfig)
+            : true;
 
-        // AK: Get schedule options only if permission is granted
-        if (!($this->config->Account->schedule_searches ?? false) || !$hasPermission)
+        // AK: Get schedule options only if permission is granted, but always allow
+        // if called from command line (constructor of class
+        // VuFindConsole\Controller\ScheduledSearchController must be able to read
+        // the schedule options).
+        if ((!($this->config->Account->schedule_searches ?? false)
+            || !$hasPermission) && !(PHP_SAPI == 'cli'))
         {
             return [];
         }
