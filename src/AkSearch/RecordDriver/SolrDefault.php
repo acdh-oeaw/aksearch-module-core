@@ -63,7 +63,6 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
         'title_partNo_txt', 'title_part_txt'
     ];
 
-
     /**
      * Get a highlighted title string, if available.
      *
@@ -105,6 +104,28 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
                 array($this, 'filterCallback')
             )
         );
+    }
+
+    /**
+     * AK: Get Solr field. Optionally get only first value from a multivalued field.
+     * Also optionally, sort the array if it is a multivalued field.
+     *
+     * @param string  $fieldName    The name of the Solr field
+     * @param boolean $firstValue   true if only first value should be returned
+     * @param string  $sort         Name of a PHP sort function
+     * 
+     * @return string|array|null    Array, string or null
+     */
+    public function getField($fieldName, $firstValue = false, $sort = null) {
+        $field = $this->fields[$fieldName] ?? null;
+        if (is_array($field) && $sort) {
+            $sort($field);
+        }
+        if (is_array($field) && $firstValue) {
+            return $field[0];
+        } else {
+            return $field;
+        }
     }
 
     /**
