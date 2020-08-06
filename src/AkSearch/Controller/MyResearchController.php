@@ -604,19 +604,28 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
                 // After successful token verification, clear list to shrink session:
                 $csrf->trimTokenList(0);
             }
-            $user->delete(
-                $config->Authentication->delete_comments_with_user ?? true
-            );
-            
+                        
             // AK: Delete user in ILS if possible
             $catId = $user->cat_id ?: $user->cat_username;
             if($this->getILS()->checkCapability('deleteUser', [$catId])) {
                 $delIlsAcc = (strcasecmp($config->Authentication->delete_ils_account,
                     'no_delete') === 0) ? false : true;
                 if ($delIlsAcc) {
-                    $this->getILS()->getDriver()->deleteUser($catId);
+                    try {
+                        $this->getILS()->getDriver()->deleteUser($catId);
+                    } catch (\VuFind\Exception\ILS $ilsEx ) {
+                        $this->flashMessenger()->addErrorMessage(
+                            $this->translate($ilsEx->getMessage())
+                        );
+                        return $view;
+                    }
                 }
             }
+
+            // AK: If user was deleted in ILS without error, delete also in VuFind DB
+            $user->delete(
+                $config->Authentication->delete_comments_with_user ?? true
+            );
             
             $view->accountDeleted = true;
             $view->redirectUrl = $this->getAuthManager()->logout(

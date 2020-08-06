@@ -727,10 +727,20 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
     public function deleteUser($userId) {
         if ($userId) {
             // Execute the "delete user" request
-            $this->makeRequest('/users/'.urlencode($userId), [], [], 'DELETE');
+            try {
+                $this->makeRequest('/users/'.urlencode($userId), [], [], 'DELETE');
+            } catch (\VuFind\Exception\ILS $e) {
+                // AK: If an ILS exception with code "400" is thrown, the chances are
+                // good that the user still has acitive loans. Thus, we throw an ILS
+                // exception with an appropriate message that we catch in the
+                // deleteAccountAction of MyReseearchController and pass to the
+                // flash messenger.
+                if ($e->getCode() == 400) {
+                    throw new \VuFind\Exception\ILS('delete_user_has_loans', 400);
+                }
+            }
         } else {
-            throw new \VuFind\Exception\ILS('No user ID is given when trying ' .
-                'to delete the user account.');
+            throw new \VuFind\Exception\ILS('delete_user_id_problems');
         }
     }
 
