@@ -491,6 +491,15 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * AK: Get notes on participants or performers from field 511.
+     *
+     * @return array An array with notes on participants or performers from field 511
+     */
+    public function getParticipantPerformerNotes() {
+        return $this->getFieldArray('511', ['a']);
+    }
+
+    /**
      * AK: Get an array of all genres.
      *
      * @return array

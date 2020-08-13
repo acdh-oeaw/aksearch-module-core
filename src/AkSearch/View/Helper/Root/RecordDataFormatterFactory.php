@@ -324,6 +324,7 @@ class RecordDataFormatterFactory
         // AK: Moved physical description to core details
         //$spec->setTemplateLine('Physical Description', 'getPhysicalDescriptions',
         //    'data-bulletList.phtml');
+        $spec->setLine('ParticipantPerformerNote', 'getParticipantPerformerNotes');
         $spec->setLine('Publication Frequency', 'getPublicationFrequency');
         $spec->setLine('Playing Time', 'getPlayingTimes');
         $spec->setLine('Format', 'getSystemDetails');
