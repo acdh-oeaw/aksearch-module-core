@@ -319,11 +319,6 @@ class RecordDataFormatterFactory
         $spec = new \VuFind\View\Helper\Root\RecordDataFormatter\SpecBuilder();
         $spec->setLine('TitleAlt', 'getTitleAlt');
         $spec->setTemplateLine('Summary', true, 'data-summary.phtml');
-        // AK: Moved notes to core details
-        //$spec->setTemplateLine('Notes', 'getGeneralNotes', 'data-bulletList.phtml');
-        // AK: Moved physical description to core details
-        //$spec->setTemplateLine('Physical Description', 'getPhysicalDescriptions',
-        //    'data-bulletList.phtml');
         $spec->setLine('ParticipantPerformerNote', 'getParticipantPerformerNotes');
         $spec->setLine('Publication Frequency', 'getPublicationFrequency');
         $spec->setLine('Playing Time', 'getPlayingTimes');
@@ -345,8 +340,13 @@ class RecordDataFormatterFactory
         $spec->setLine('Content', 'getContents', null, ['translate' => true]);
         $spec->setLine('MediaTypes', 'getMediaTypes', null, ['translate' => true]);
         $spec->setLine('Carrier', 'getCarriers', null, ['translate' => true]);
-        $spec->setLine('Supplements', 'getSupplements');
-        $spec->setLine('SupplementParents', 'getSupplementParents');
+        $spec->setTemplateLine(
+            'Supplements', 'getSupplements', 'data-relations.phtml'
+        );
+        $spec->setTemplateLine(
+            'SupplementParents', 'getSupplementParents', 'data-relations.phtml'
+        );
+        
         $spec->setTemplateLine('Author Notes', true, 'data-authorNotes.phtml');
         return $spec->getArray();
     }
