@@ -88,7 +88,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
         // reason, the first 10 items are called which is the default API behaviour.
         $itemsPath = '/bibs/' . urlencode($id) . '/holdings/ALL/items?'
             . $apiPagingParams
-            . '&order_by=library,location,enum_a,enum_b'
+            . '&order_by=library,enum_a,enum_b,location'
             . '&direction=desc'
             . '&expand=due_date_policy,due_date';
 
