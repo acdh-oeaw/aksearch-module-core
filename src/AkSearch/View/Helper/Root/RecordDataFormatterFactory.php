@@ -321,6 +321,7 @@ class RecordDataFormatterFactory
         $spec->setTemplateLine('Summary', true, 'data-summary.phtml');
         $spec->setLine('ParticipantPerformerNote', 'getParticipantPerformerNotes');
         $spec->setLine('Publication Frequency', 'getPublicationFrequency');
+        $spec->setLine('NumberingNote', 'getNumberingNotes');
         $spec->setLine('Playing Time', 'getPlayingTimes');
         $spec->setLine('Format', 'getSystemDetails');
         $spec->setLine('Audience', 'getTargetAudienceNotes');

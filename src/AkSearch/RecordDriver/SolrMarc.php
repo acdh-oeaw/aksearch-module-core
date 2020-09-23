@@ -49,6 +49,7 @@ class SolrMarc extends SolrDefault
             \VuFind\RecordDriver\MarcReaderTrait;
 
         getURLs as protected getURLsFromMarcXml;
+        getNumberingNotes as protected getNumberingNotesFromMarcXml;
         getLanguages as protected getLanguagesFromMarcXml;
         // Method "getFormats" does not exist in MarcAdvancedTrait, but 
         // MarcAdvancedTrait uses MarcBasicTrait where it exists.
@@ -63,6 +64,19 @@ class SolrMarc extends SolrDefault
         hasParents as protected hasParentsFromXml;
         getSeriesVolume as protected getSeriesVolumeFromXml;
         getSummarizedHoldings as protected getSummarizedHoldingsFromXml;
+    }
+
+    /**
+     * Get field numberingNotes_txt_mv (Numbering Peculiarities Note = Marc 515a)
+     *
+     * @return array    An array of values in numberingNotes_txt_mv (= Marc 515a)
+     */
+    public function getNumberingNotes() {
+        $numNotes = $this->fields['numberingNotes_txt_mv'] ?? null;
+        if ($numNotes == null || empty($numNotes)) {
+            $numNotes = $this->getNumberingNotesFromMarcXml();
+        }
+        return array_unique($numNotes);
     }
 
     /**

@@ -54,6 +54,15 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * Get field 515a (Numbering Peculiarities Note)
+     *
+     * @return array    An array of values in 515a
+     */
+    public function getNumberingNotes() {
+        return $this->getFieldArray('515', ['a'], true, '; ');
+    }
+
+    /**
      * Get all distinct subject terms as an array. We use fields 689 and 982. We
      * don't return terms that are names of persons or corporations. We are only
      * getting subjects with this function.
