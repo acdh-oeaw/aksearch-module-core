@@ -64,6 +64,7 @@ class SolrMarc extends SolrDefault
         hasParents as protected hasParentsFromXml;
         getSeriesVolume as protected getSeriesVolumeFromXml;
         getSummarizedHoldings as protected getSummarizedHoldingsFromXml;
+        getAkPublicationDetails as protected getAkPublicationDetailsFromMarcXml;
     }
 
     /**
@@ -774,6 +775,23 @@ class SolrMarc extends SolrDefault
             && !isset($this->fields['dateSpan']))
             ? $this->fields['publishDate']
             : [];
+    }
+
+    /**
+     * Get publication details from 264 fields. This function take several variants
+     * of subfield notation into account, like e. g. multiple subfields a and b.
+     * 
+     * For these special cases in austrian libraries, see:
+     * https://wiki.obvsg.at/Katalogisierungshandbuch/Kategorienuebersicht264FE
+     * 
+     * We don't (yet) use data from the Solr index. We get them from MarcXML.
+     *
+     * @return array
+     */
+    public function getAkPublicationDetails() {
+        // Get publication details from MarcXML. We don't (yet) use data from the
+        // Solr index.
+        return $this->getAkPublicationDetailsFromMarcXml();
     }
 
     /**
