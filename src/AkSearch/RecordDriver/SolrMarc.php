@@ -922,7 +922,8 @@ class SolrMarc extends SolrDefault
      * @return array An array or null
      */
     public function getPrecedings() {
-        return $this->getRelations('preceding_txt_mv', true, '/^\s*vorg\.?:?\s*$/i');
+        return $this->getRelations('preceding_txt_mv', true,
+            '/^\s*vorg\.?:?\s*?-*?>?$/i');
     }
 
     /**
@@ -931,7 +932,8 @@ class SolrMarc extends SolrDefault
      * @return array An array or null
      */
     public function getSucceedings() {
-        return $this->getRelations('succeeding_txt_mv', true);
+        return $this->getRelations('succeeding_txt_mv', true,
+            '/^\s*forts\.?:?\s*?-*?>?$/i');
     }
 
     /**
