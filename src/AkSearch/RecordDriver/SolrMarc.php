@@ -48,14 +48,14 @@ class SolrMarc extends SolrDefault
         \AkSearch\RecordDriver\MarcAdvancedTrait::getPublicationInfo insteadof
             \VuFind\RecordDriver\MarcReaderTrait;
 
-        getURLs as protected getURLsFromMarcXml;
-        getNumberingNotes as protected getNumberingNotesFromMarcXml;
-        getLanguages as protected getLanguagesFromMarcXml;
+        getURLs as protected getURLsFromXml;
+        getNumberingNotes as protected getNumberingNotesFromXml;
+        getLanguages as protected getLanguagesFromXml;
         // Method "getFormats" does not exist in MarcAdvancedTrait, but 
         // MarcAdvancedTrait uses MarcBasicTrait where it exists.
-        getFormats as protected getFormatsFromMarcXml;
-        getBibliographicLevel as protected getBibliographicLevelFromMarcXml;
-        getGenres as protected getGenresFromMarcXml;
+        getFormats as protected getFormatsFromXml;
+        getBibliographicLevel as protected getBibliographicLevelFromXml;
+        getGenres as protected getGenresFromXml;
         // Method "getCallNumbers" does not exist in MarcAdvancedTrait, but 
         // MarcAdvancedTrait uses MarcBasicTrait where it exists.
         getCallNumbers as protected getCallNumbersFromXml;
@@ -64,7 +64,9 @@ class SolrMarc extends SolrDefault
         hasParents as protected hasParentsFromXml;
         getSeriesVolume as protected getSeriesVolumeFromXml;
         getSummarizedHoldings as protected getSummarizedHoldingsFromXml;
-        getAkPublicationDetails as protected getAkPublicationDetailsFromMarcXml;
+        getPublicationDetailsAut as protected getPublicationDetailsAutFromXml;
+        getPrecedings as protected getPrecedingsFromXml;
+        getSucceedings as protected getSucceedingsFromXml;
     }
 
     /**
@@ -75,7 +77,7 @@ class SolrMarc extends SolrDefault
     public function getNumberingNotes() {
         $numNotes = $this->fields['numberingNotes_txt_mv'] ?? null;
         if ($numNotes == null || empty($numNotes)) {
-            $numNotes = $this->getNumberingNotesFromMarcXml();
+            $numNotes = $this->getNumberingNotesFromXml();
         }
         return array_unique($numNotes);
     }
@@ -94,7 +96,7 @@ class SolrMarc extends SolrDefault
     {
         $langs = $this->fields['language'] ?? null;
         if ($langs == null || empty($langs)) {
-            $langs = $this->getLanguagesFromMarcXml();
+            $langs = $this->getLanguagesFromXml();
         }
         return array_unique($langs);
     }
@@ -143,7 +145,7 @@ class SolrMarc extends SolrDefault
     		}
     	} else {
             // Fallback to MarcXML parsing method
-            $results = $this->getURLsFromMarcXml();
+            $results = $this->getURLsFromXml();
         }
        
         return $results;
@@ -252,7 +254,7 @@ class SolrMarc extends SolrDefault
         // Get the formats from MarcXML as a fallback. This is using the method from
         // MarcBasicTrait (which in turn is "use"d by MarcAdvancedTrait).
         if ($formats == null || empty($formats)) {
-            $formats = $this->getFormatsFromMarcXml();
+            $formats = $this->getFormatsFromXml();
         }
 
         // Return the formats
@@ -275,7 +277,7 @@ class SolrMarc extends SolrDefault
     {
         $level = $this->fields['bibLevel_txtF'] ?? null;
         if ($level == null) {
-            $level = $this->getBibliographicLevelFromMarcXml();
+            $level = $this->getBibliographicLevelFromXml();
         }
         return $level;
     }
@@ -291,7 +293,7 @@ class SolrMarc extends SolrDefault
     {
         $genres = $this->fields['bibForm_txtF_mv'];
         if ($genres == null) {
-            $genres = $this->getGenresFromMarcXml();
+            $genres = $this->getGenresFromXml();
         }
         return $genres;
     }
@@ -788,10 +790,10 @@ class SolrMarc extends SolrDefault
      *
      * @return array
      */
-    public function getAkPublicationDetails() {
+    public function getPublicationDetailsAut() {
         // Get publication details from MarcXML. We don't (yet) use data from the
         // Solr index.
-        return $this->getAkPublicationDetailsFromMarcXml();
+        return $this->getPublicationDetailsAutFromXml();
     }
 
     /**
@@ -922,6 +924,7 @@ class SolrMarc extends SolrDefault
      * @return array An array or null
      */
     public function getPrecedings() {
+        $preceedings = $this->getPrecedingsFromXml();
         return $this->getRelations('preceding_txt_mv');
     }
 
@@ -931,6 +934,7 @@ class SolrMarc extends SolrDefault
      * @return array An array or null
      */
     public function getSucceedings() {
+        $succeedings = $this->getSucceedingsFromXml();
         return $this->getRelations('succeeding_txt_mv');
     }
 

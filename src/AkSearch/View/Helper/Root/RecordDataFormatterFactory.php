@@ -165,7 +165,7 @@ class RecordDataFormatterFactory
 
         // AK: Use custom function for getting publication details
         $spec->setTemplateLine(
-            'PublicationDetails', 'getAkPublicationDetails', 'data-publisher.phtml'
+            'PublicationDetails', 'getPublicationDetailsAut', 'data-publisher.phtml'
         );
 
         // AK: Use custom function for getting year of publication. This does get

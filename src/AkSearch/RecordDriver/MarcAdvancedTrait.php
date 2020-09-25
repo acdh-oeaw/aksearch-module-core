@@ -596,7 +596,7 @@ trait MarcAdvancedTrait
      *
      * @return array
      */
-    public function getAkPublicationDetails() {
+    public function getPublicationDetailsAut() {
         // Create result array as return value
         $result = [];
 
