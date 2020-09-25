@@ -601,18 +601,8 @@ trait MarcAdvancedTrait
         $result = [];
 
         // Get all fields 264 and add their data to an easy-to-process array
-        $fs264 = [];
-        $fs264FileMarc = $this->getMarcRecord()->getFields('264');
-        foreach ($fs264FileMarc as $f264FileMarc) {
-            $ind1  = $f264FileMarc->getIndicator('1');
-            $ind2  = $f264FileMarc->getIndicator('2');
-            $subfs = [];
-            foreach ($f264FileMarc->getSubfields() as $sf) {
-                $subfs[] = [$sf->getCode() => $sf->getData()];
-            }
-            $fs264[] = ['ind1' => $ind1, 'ind2' => $ind2, 'subfs' => $subfs];
-        }
-
+        $fs264 = $this->getFieldsAsArray('264');
+        
         // Iterate over each field 264
         foreach ($fs264 as $f264) {
             $subfieldResult = [];
@@ -850,6 +840,33 @@ trait MarcAdvancedTrait
         }
 
         return $summarizedHoldings;
+    }
+
+    /**
+     * Get all fields with a given tag and convert them to an easy-to-process array.
+     * 
+     * @param string $tag   A Marc21 tag, e. g. 245 for the title field.
+     * 
+     * @return array        An array with the keys 'ind1', 'ind2' and 'subfs' or an
+     *                      empty array if no field was found.
+     */
+    public function getFieldsAsArray(string $tag) {
+        $result = [];
+
+        // Get all fields with the given tag and add all of their data to an
+        // easy-to-process array.
+        $fieldsFileMarc = $this->getMarcRecord()->getFields($tag);
+        foreach ($fieldsFileMarc as $fieldFileMarc) {
+            $ind1  = $fieldFileMarc->getIndicator('1');
+            $ind2  = $fieldFileMarc->getIndicator('2');
+            $subfs = [];
+            foreach ($fieldFileMarc->getSubfields() as $sf) {
+                $subfs[] = [$sf->getCode() => $sf->getData()];
+            }
+            $result[] = ['ind1' => $ind1, 'ind2' => $ind2, 'subfs' => $subfs];
+        }
+
+        return $result;
     }
 
     /**
