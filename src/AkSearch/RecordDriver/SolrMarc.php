@@ -65,8 +65,6 @@ class SolrMarc extends SolrDefault
         getSeriesVolume as protected getSeriesVolumeFromXml;
         getSummarizedHoldings as protected getSummarizedHoldingsFromXml;
         getPublicationDetailsAut as protected getPublicationDetailsAutFromXml;
-        getPrecedings as protected getPrecedingsFromXml;
-        getSucceedings as protected getSucceedingsFromXml;
     }
 
     /**
@@ -924,8 +922,7 @@ class SolrMarc extends SolrDefault
      * @return array An array or null
      */
     public function getPrecedings() {
-        $preceedings = $this->getPrecedingsFromXml();
-        return $this->getRelations('preceding_txt_mv');
+        return $this->getRelations('preceding_txt_mv', true, '/^\s*vorg\.?:?\s*$/i');
     }
 
     /**
@@ -934,8 +931,7 @@ class SolrMarc extends SolrDefault
      * @return array An array or null
      */
     public function getSucceedings() {
-        $succeedings = $this->getSucceedingsFromXml();
-        return $this->getRelations('succeeding_txt_mv');
+        return $this->getRelations('succeeding_txt_mv', true);
     }
 
     /**
@@ -950,10 +946,26 @@ class SolrMarc extends SolrDefault
     /**
      * AK: Generic function for getting relations.
      * TODO: Implement a fallback to MarcXML if possible.
+     *
+     * @param string $solrField The Solr field containing the relation information.
+     * It must be a multivalued field. Per relation there has to be exactly 13
+     * values. E. g. for 2 relations there need to be 26 values in the multivalued
+     * field. The content and order of these values must be: 1. title, 2. main entry,
+     * 3. edition, 4. publication data, 5. relation part, 6. physical descriptions,
+     * 7. relation info (used for prefix), 8. serial data, 9. note, 10. control no.,
+     * 11. ISSN, 12. ISBN, 13. record ID (used for linking).
+     * @param boolean $prefix   true if the prefix from "relation info" should be
+     *                          displayed to the user, false otherwise.
+     * @param string $prefixExclude Only necessary if $prefix is true. Should be a
+     * regex pattern (including slashes and optional regex modifiers) that will be
+     * applied to the prefix value. If it matches, the prefix will NOT be displayed.
+     * This is usefull if you want to avoid showing the same value if e. g. the label
+     * in the core details table and the prefix would be the same. Example: /vorg\./i
      * 
-     * @return array An array or null
+     * @return array|null An array with relation data or null
      */
-    public function getRelations($solrField, $prefix = false) {
+    public function getRelations($solrField, $prefix = false, $prefixExclude = null)
+    {
         $result = [];
 
         $solr = $this->fields[$solrField] ?? null;
@@ -1016,7 +1028,8 @@ class SolrMarc extends SolrDefault
                         'relPart' => $relPart, 'physDesc' => $physDesc,
                         'relInfo' => $relInfo, 'serData' => $serData,
                         'note' => $note, 'ctrlNo' => $ctrlNo, 'issn' => $issn,
-                        'isbn' => $isbn, 'id' => $id, 'prefix' => $prefix];
+                        'isbn' => $isbn, 'id' => $id, 'prefix' => $prefix,
+                        'prefixExclude' => $prefixExclude];
                 }
     		}
         }
