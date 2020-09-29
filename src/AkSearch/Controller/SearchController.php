@@ -109,7 +109,7 @@ class SearchController extends \VuFind\Controller\SearchController
         // AK: Get facets filter from query sent by new items search form
         $filter = $this->params()->fromQuery('filter');
         
-        // AK: Add facets filter from items search form to query for results page
+        // AK: Add facets filter from new items search form to query for results page
         if (!empty($filter)) {
             $this->getRequest()->getQuery()->set('filter', $filter);
         }
