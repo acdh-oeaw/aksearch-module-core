@@ -52,11 +52,14 @@ $config = [
             'ajaxhandler' => [
                 'factories' => [
                     'AkSearch\AjaxHandler\GetSlideFacetTemplate' =>
-                        'AkSearch\AjaxHandler\GetSlideFacetTemplateFactory'
+                        'AkSearch\AjaxHandler\GetSlideFacetTemplateFactory',
+                    'AkSearch\AjaxHandler\GetFacetData' =>
+                        'AkSearch\AjaxHandler\GetFacetDataFactory'
                 ],
                 'aliases' => [
                     'getSlideFacetTemplate' =>
-                        'AkSearch\AjaxHandler\GetSlideFacetTemplate'
+                        'AkSearch\AjaxHandler\GetSlideFacetTemplate',
+                    'getFacetData' => 'AkSearch\AjaxHandler\GetFacetData'
                 ]
             ],
             'auth' => [
