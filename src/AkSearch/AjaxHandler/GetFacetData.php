@@ -120,9 +120,10 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
         // AK: Get AkSearch\Search\Solr\Results object
         $results = $this->resultsManager->get($backend);
 
-        // AK: Get AkSearch\Search\UrlQueryHelper object. Don't get it directly from
-        // $results variable as this doesn't work!
-        $urlHelper = $this->resultsManager->get($backend)->getUrlQuery();
+        // AK: Get AkSearch\Search\UrlQueryHelper object.
+        // AK UPDATE: Storing url helper to a variable doesn't work. We always need
+        //            to use it directly with "$results->getUrlQuery()".
+        //$urlHelper = $results->getUrlQuery();
 
         // AK: Get \VuFind\Http\PhpEnvironment\Request() obect
         $request = new \VuFind\Http\PhpEnvironment\Request();
@@ -145,13 +146,13 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
             // of the new items will only be displayed if the "range" parameter exists.
             // See: \AkSearch\Controller\SearchController->newitemAction()
             if ($range) {
-                $urlHelper->setDefaultParameter('range', $range);
+                $results->getUrlQuery()->setDefaultParameter('range', $range);
                 $hiddenFilters[] = $newItems->getSolrFilter($range);
             }
 
             // AK: Add "department" from new items search if it exists
             if ($department) {
-                $urlHelper->setDefaultParameter('department', $department);
+                $results->getUrlQuery()->setDefaultParameter('department', $department);
                 $request->getQuery()->set('department', $department);
             }
 
@@ -159,13 +160,13 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
             // the request object so that the facets itself will get filtered correctly.
             // If we don't do that, the facet numbers won't be correct.
             if ($hiddenFilters) {
-                $urlHelper->setDefaultParameter('hiddenFilters', $hiddenFilters);
+                $results->getUrlQuery()->setDefaultParameter('hiddenFilters', $hiddenFilters);
                 $request->getQuery()->set('hiddenFilters', $hiddenFilters);
             }
 
             // AK: Add facets filter from new items search form to query for results page
             if (!empty($filter)) {
-                $urlHelper->setDefaultParameter('filter', $filter);
+                $results->getUrlQuery()->setDefaultParameter('filter', $filter);
                 $request->getQuery()->set('filter', $filter);
             }
         }
@@ -184,7 +185,7 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
             $facetList = $facets[$facet]['data']['list'];
             $this->facetHelper->sortFacetList($facetList, $sort);
             $facets = $this->facetHelper->buildFacetArray(
-                $facet, $facetList, $urlHelper, false
+                $facet, $facetList, $results->getUrlQuery(), false
             );
         }
 
