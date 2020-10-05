@@ -75,7 +75,7 @@ class Parts extends \VuFind\RecordTab\AbstractBase {
             // Arrays for sorting
             $pubYears = array_map(
                 function($pubYear) {
-                    return str_replace(array('[', ']'), '', $pubYear);
+                    return preg_replace('/[^\d]+/', '', $pubYear);
                 },
                 array_column($childs, 'pubYear')
             );
