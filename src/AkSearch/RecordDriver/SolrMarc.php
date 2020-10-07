@@ -49,6 +49,7 @@ class SolrMarc extends SolrDefault
             \VuFind\RecordDriver\MarcReaderTrait;
 
         getURLs as protected getURLsFromXml;
+        getAccessNotes as protected getAccessNotesFromXml;
         getNumberingNotes as protected getNumberingNotesFromXml;
         getLanguages as protected getLanguagesFromXml;
         // Method "getFormats" does not exist in MarcAdvancedTrait, but 
@@ -147,6 +148,20 @@ class SolrMarc extends SolrDefault
         }
        
         return $results;
+    }
+
+    /**
+     * Get access note that describes if a ressource is available with or without
+     * restrictions. Fallback to MarcXML if Solr field doesn't exist.
+     *
+     * @return array    The text of the access note
+     */
+    public function getAccessNotes() {
+        $accessNotes = $this->fields['accessNote_str_mv'] ?? null;
+        if (empty($accessNotes)) {
+            $accessNotes = $this->getAccessNotesFromXml();
+        }
+        return $accessNotes;
     }
 
     /**

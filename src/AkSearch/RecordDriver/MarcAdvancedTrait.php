@@ -63,6 +63,16 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * Get access note that describes if a ressource is available with or without
+     * restrictions. This is very specific to AK library as we use local field 990a.
+     *
+     * @return array    The text of the access note
+     */
+    public function getAccessNotes() {
+        return $this->getFieldArray('990', ['a']);
+    }
+
+    /**
      * Get all distinct subject terms as an array. We use fields 689 and 982. We
      * don't return terms that are names of persons or corporations. We are only
      * getting subjects with this function.

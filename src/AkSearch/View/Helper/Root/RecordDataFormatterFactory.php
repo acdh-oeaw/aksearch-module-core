@@ -243,6 +243,10 @@ class RecordDataFormatterFactory
             ['allowZero' => false]
         );
         $spec->setTemplateLine('Online Access', true, 'data-onlineAccess.phtml');
+        
+        // AK: Get access notes
+        $spec->setLine('access_note', 'getAccessNotes');
+
         $spec->setTemplateLine(
             'Related Items', 'getAllRecordLinks', 'data-allRecordLinks.phtml'
         );
