@@ -41,6 +41,10 @@ class ContentController extends \VuFind\Controller\ContentController
 {
     /**
      * Default action if none provided
+     * 
+     * AK: Additional functionalities:
+     *  - Added access restrictions via permissions.ini
+     *  - Added possibility to pass variables to content page from config.ini
      *
      * @return Zend\View\Model\ViewModel
      */
@@ -48,8 +52,11 @@ class ContentController extends \VuFind\Controller\ContentController
     {
         $page = $this->params()->fromRoute('page');
 
+        // AK: Get config.ini
+        $mainConfs = $this->getConfig()->toArray();
+        
         // AK: Return error page with appropriate message if access is not granted
-        if (!$this->isAccessGranted($page)) {
+        if (!$this->isAccessGranted($mainConfs, $page)) {
             $errorView = $this->createViewModel()->setTemplate('error/404');
             $errorView->message = 'access_denied';
             $errorView->reason = 'access_denied_content_page';
@@ -82,20 +89,26 @@ class ContentController extends \VuFind\Controller\ContentController
         }
 
         $view = $this->createViewModel(['page' => $page]);
+
+        // AK: Get variables for the current static content page
+        $vars = $this->getVariables($mainConfs, $page);
+        if ($vars) {
+            // Set variables if we found some
+            $view->setVariables($vars);
+        }
+        
         return $view;
     }
 
     /**
      * AK: Check if access is granted to a specific "static content page".
      *
-     * @param string   $page The name of the page.
+     * @param array    $mainConfs The main configs form config.ini as an array
+     * @param string   $page      The name of the static content page
      * 
      * @return boolean true if access is granted, false otherwise
      */
-    protected function isAccessGranted($page) {
-        // Get config.ini
-        $mainConfs = $this->getConfig()->toArray();
-
+    protected function isAccessGranted($mainConfs, $page) {
         // Get [StaticPagePermissions] section and check if it exists or is empty
         $sppConfs = $mainConfs['StaticPagePermissions'] ?? null ?: null;
 
@@ -106,11 +119,11 @@ class ContentController extends \VuFind\Controller\ContentController
         }
 
         // Get the [StaticPagePermissions] for the current static page
-        $sspPageConfs = $sppConfs[$page] ?? null;
+        $sppPageConfs = $sppConfs[$page] ?? null;
 
         // If no [StaticPagePermissions] exists for the current static page, return
         // "true" for "access is granted" as this is the default
-        if (!$sspPageConfs) {
+        if (!$sppPageConfs) {
             return true;
         }
 
@@ -118,10 +131,10 @@ class ContentController extends \VuFind\Controller\ContentController
         $auth = $this->getAuthorizationService();
 
         // Iterate over the permission(s) for the current page
-        foreach ($sspPageConfs as $sspPageConf) {
+        foreach ($sppPageConfs as $sppPageConf) {
             // If at least one permission results to "true", we return "true" as
             // permission to the current static page is granted.
-            if ($auth->isGranted($sspPageConf)) {
+            if ($auth->isGranted($sppPageConf)) {
                 return true;
             }
         }
@@ -131,6 +144,38 @@ class ContentController extends \VuFind\Controller\ContentController
         // returns "true". In consequence, the current user does not have the
         // permission to see the current static page, so we return "false".
         return false;
+    }
+
+    /**
+     * Get an array of variables from config.ini in section [StaticPageVariables].
+     *
+     * @param array  $mainConfs The main configs form config.ini as an array
+     * @param string $page      The name of the static content page
+     * 
+     * @return array An array with variables for the current static content page or
+     *               an empty array if no variables are set
+     */
+    protected function getVariables($mainConfs, $page) {
+        // Get [StaticPageVariables] section and check if it exists or is empty
+        $spvConfs = $mainConfs['StaticPageVariables'] ?? null ?: null;
+
+        // If no variables are set in [StaticPageVariables], return an empty array
+        if (!$spvConfs) {
+            return [];
+        }
+
+        // Get the [StaticPageVariables] for the current static page
+        $spvPageConfs = $spvConfs[$page] ?? null;
+
+        // If no [StaticPageVariables] exists for the current static page, return an
+        // empty array
+        if (!$spvPageConfs) {
+            return [];
+        }
+
+        // When we came this far, some variables are set for the current static
+        // content page, so we return them.
+        return $spvPageConfs;
     }
 
 }
