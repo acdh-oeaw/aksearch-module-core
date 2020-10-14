@@ -156,12 +156,15 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                         $isRecall = true;
                     }
     
+                    $itemNotes = null;
                     if ($item->item_data->public_note != null
                         && !empty($item->item_data->public_note)
                     ) {
                         $itemNotes = [(string)$item->item_data->public_note];
                     }
     
+                    $number = null;
+                    $description = null;
                     if ($item->item_data->description != null
                         && !empty($item->item_data->description)
                     ) {
