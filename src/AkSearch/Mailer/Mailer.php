@@ -140,7 +140,8 @@ class Mailer extends \VuFind\Mailer\Mailer
                 ->addFrom($from)
                 ->addTo($recipients)
                 ->setBody($mimeMessage) // AK: Set mime message as body
-                ->setSubject($subject);
+                ->setSubject($subject)
+                ->setSender($from); // AK: Set Sender header (for GMX.AT and WEB.de)
             if ($replyTo) {
                 $message->addReplyTo($replyTo);
             }
