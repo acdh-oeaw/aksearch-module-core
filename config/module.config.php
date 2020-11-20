@@ -125,6 +125,7 @@ $config = [
                     'AkSearch\RecordTab\Description' => '\Zend\ServiceManager\Factory\InvokableFactory',
                     'AkSearch\RecordTab\HoldingsILS' => 'VuFind\RecordTab\HoldingsILSFactory',
                     'AkSearch\RecordTab\Parts' => '\Zend\ServiceManager\Factory\InvokableFactory',
+                    'AkSearch\RecordTab\Provenance' => '\Zend\ServiceManager\Factory\InvokableFactory',
                     'AkSearch\RecordTab\StaffViewArray' => '\Zend\ServiceManager\Factory\InvokableFactory',
                     'AkSearch\RecordTab\StaffViewMARC' => '\Zend\ServiceManager\Factory\InvokableFactory'
                 ],
@@ -132,6 +133,7 @@ $config = [
                     'description' => 'AkSearch\RecordTab\Description',
                     'holdingsils' => 'AkSearch\RecordTab\HoldingsILS',
                     'parts' => 'AkSearch\RecordTab\Parts',
+                    'provenance' => 'AkSearch\RecordTab\Provenance',
                     'staffviewarray' => 'AkSearch\RecordTab\StaffViewArray',
                     'staffviewmarc' => 'AkSearch\RecordTab\StaffViewMARC'
                 ]
