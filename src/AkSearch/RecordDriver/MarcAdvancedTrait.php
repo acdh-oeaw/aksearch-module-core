@@ -853,6 +853,240 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * AK: Check if this record contains a provenance code.
+     *
+     * @return boolean True if a provenance code exists, false otherwise
+     */
+    public function hasItemProvenance($provenanceConfig = null) {
+        $provField = $provenanceConfig['field'] ?? null ?: null;
+        $provFilter = $provenanceConfig['filter'] ?? [] ?: [];
+        if (!$provField) {
+            return false;
+        }
+        $splittedProvField = explode('|', $provField);
+        if (count($splittedProvField) == 4) {
+            $fieldNo = $splittedProvField[0];
+            $ind1 = (empty($splittedProvField[1])) ? null : $splittedProvField[1];
+            $ind2 = (empty($splittedProvField[2])) ? null : $splittedProvField[2];
+            $subf = $splittedProvField[3];
+        } else {
+            return false;
+        }
+
+        // Get provenance fields from the record
+        $provFields = $this->getFieldsAsArray($fieldNo);
+
+        // Return false if there are no ITM fields
+        if (empty($provFields)) {
+            return false;
+        }
+
+        // Create result array
+        $provCodes = [];
+
+        // Get values from all subfields "g" from all "ITM" fields
+        foreach ($provFields as $provField) {
+            
+            // Check for indicator 1
+            if ($ind1 != null && $provField['ind1'] != $ind1) {
+                return false;
+            }
+
+            // Check for indicator 2
+            if ($ind2 != null && $provField['ind2'] != $ind2) {
+                return false;
+            }
+
+            // Array column of subfields which contains the provenience code
+            $subfsProv = array_column($provField['subfs'], $subf);
+
+            // Add provenience codes to a result array
+            $provCodes = array_merge($provCodes, $subfsProv);
+        }
+
+        // If we have no provenance codes, return false
+        if (empty($provCodes)) {
+            return false;
+        }
+
+        // Filter the proveniance codes if filters are configured in config.ini
+        if (!empty($provFilter)) {
+            $provCodes = array_intersect($provCodes, $provFilter);
+        }
+
+        return empty($provCodes) ? false : true;
+    }
+
+    /**
+     * AK: Get provenance fields.
+     * TODO: This is work in progress! Create a generic data retrieval function to
+     * get information from MARC fields as string (display in one line) or array
+     * (display as <ul>...</ul>) for displaying them in a generic record tab.
+     *
+     * @return array The item provenance fields as array
+     */
+    public function getItemProvenance() {
+        $fsEXL = $this->getFieldsAsArray('EXL'); // = 991
+        $fsXMP = $this->getFieldsAsArray('XMP'); // = 992
+        $fsBEZ = $this->getFieldsAsArray('BEZ'); // = 695
+        $xmps = [];
+        $bezs = [];
+        $exls = [];
+
+        // Field 991 (EXL)
+        foreach ($fsEXL as $fEXL) {
+            $dimension = implode(', ', array_column($fEXL['subfs'], 'a'));
+            $technology = implode(', ', array_column($fEXL['subfs'], 'c'));
+            $text = implode(', ', array_column($fEXL['subfs'], 't'));
+            $prevOwners = array_column($fEXL['subfs'], 'b');
+            $motifs = array_column($fEXL['subfs'], 'm');
+            $exls[] = array_filter([
+                'dimension' => $dimension,
+                'technology' => $technology,
+                'text' => $text,
+                'prevOwners' => $prevOwners,
+                'motifs' => $motifs
+            ]);
+        }
+
+        // Field 992 (XMP)
+        foreach ($fsXMP as $fXMP) {
+            $callNo = implode(', ', array_column($fXMP['subfs'], 'f'));
+            $cover = implode(', ', array_column($fXMP['subfs'], 'd'));
+            $noteStr = implode(', ', array_column($fXMP['subfs'], 'e'));
+            $notes = (!empty($noteStr)) ? preg_split('/\.\s+-\s*/', $noteStr) : null;
+            $marginalia = implode(', ', array_column($fXMP['subfs'], 'm'));
+            $provenances = array_column($fXMP['subfs'], 'p');
+            $lootNote = implode(', ', array_column($fXMP['subfs'], 'q'));
+            $restitutionState = implode(', ', array_column($fXMP['subfs'], 'r'));
+            $xmps[] = array_filter([
+                'callNo' => $callNo,
+                'cover' => $cover,
+                'notes' => $notes,
+                'marginalia' => $marginalia,
+                'provenances' => $provenances,
+                'lootNote' => $lootNote,
+                'restitutionState' => $restitutionState
+            ]);
+        }
+        
+        // Field 695 (BEZ)
+        foreach ($fsBEZ as $fBEZ) {
+            //if ($fBEZ['ind1'] == '1') {
+                $name = implode(', ', array_column($fBEZ['subfs'], 'a'));
+                $date = implode(', ', array_column($fBEZ['subfs'], 'd'));
+                $roles = array_column($fBEZ['subfs'], '4');
+                $authId = implode(', ', array_column($fBEZ['subfs'], '0'));
+                $bezs[] = array_filter([
+                    'name' => $this->stripNonSortingChars($name),
+                    'date' => $date,
+                    'authId' => $authId,
+                    'roles' => $roles
+                ]);
+            //}
+        }
+
+        return array_filter([
+            'xmps' => $xmps,
+            'exls' => $exls,
+            'bezs' => $bezs
+        ]);
+    }
+
+    /**
+     * AK: Get information for record banner(s).
+     *
+     * @param array $recordBannerConfig Record banner config from config.ini as array
+     * 
+     * @return array Array with information for record banner (images, texts) or an
+     *               empty array if no record banner should be displayed.
+     */
+    public function getRecordBanner($recordBannerConfig = null) {
+        // Return if no config is set
+        if ($recordBannerConfig === null) {
+            return [];
+        }
+
+        // Return value
+        $result = [];
+        
+        // Iterate over all record banner configs
+        foreach($recordBannerConfig as $rbc) {
+            // Get MARC field
+            $field = $rbc['field'] ?? null ?: null;
+            
+            // If no field is set, continue to next loop iteration
+            if (!$field) { continue; }
+
+            // Split "field" config value and check if we have exactly 4 values for
+            // the tag, indicator 1, indicator 2 and subfield of the MARC field.
+            $splField = explode('|', $field);
+            if (count($splField) == 4) {
+                $tag = $splField[0];
+                $ind1 = (empty($splField[1])) ? null : $splField[1];
+                $ind2 = (empty($splField[2])) ? null : $splField[2];
+                $subf = $splField[3];
+            } else {
+                continue;
+            }
+
+            // Get given marc fields from the record
+            $marcFlds = $this->getFieldsAsArray($tag);
+
+            // Continue to next loop iteration if no fields are found in the record
+            if (empty($marcFlds)) { continue; }
+
+            // Values array
+            $marcValues = [];
+
+            // Get values from all given subfields if indicators are matching
+            foreach ($marcFlds as $marcFld) {
+                // Check for indicator 1
+                if ($ind1 != null && $marcFld['ind1'] != $ind1) {
+                    return [];
+                }
+
+                // Check for indicator 2
+                if ($ind2 != null && $marcFld['ind2'] != $ind2) {
+                    return [];
+                }
+
+                // Array column of subfield values
+                $currentMarcValues = array_column($marcFld['subfs'], $subf);
+
+                // Add subfield values to a result array
+                $marcValues = array_unique(
+                    array_merge($marcValues, $currentMarcValues)
+                );
+            }
+
+            // Continue to next loop iteration if no values were found in the record
+            if (empty($marcValues)) { continue; }
+
+            // Values that should exist in the MARC field
+            $values = $rbc['values'] ?? null ?: null;
+
+            // If no values are set, continue to next loop iteration
+            if (!$values) { continue; }
+
+            $splValues = explode('|', $values);
+
+            // Filter the marc values if values are configured in config.ini
+            $marcValues = array_intersect($marcValues, $splValues);            
+
+            // Add image and/or text that should be displayed as record banner
+            if (!empty($marcValues)) {
+                $result[] = array_filter([
+                    'image' => ($rbc['image'] ?? null ?: null),
+                    'text' => ($rbc['text'] ?? null ?: null)
+                ]);
+            }
+        }
+
+        return array_filter($result);
+    }
+
+    /**
      * Get all fields with a given tag and convert them to an easy-to-process array.
      * 
      * @param string $tag   A Marc21 tag, e. g. 245 for the title field.

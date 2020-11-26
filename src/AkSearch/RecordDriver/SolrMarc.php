@@ -66,6 +66,9 @@ class SolrMarc extends SolrDefault
         getSeriesVolume as protected getSeriesVolumeFromXml;
         getSummarizedHoldings as protected getSummarizedHoldingsFromXml;
         getPublicationDetailsAut as protected getPublicationDetailsAutFromXml;
+        hasItemProvenance as protected hasItemProvenanceFromXml;
+        getItemProvenance as protected getItemProvenanceFromXml;
+        getRecordBanner as protected getRecordBannerFromXml;
     }
 
     /**
@@ -1157,6 +1160,47 @@ class SolrMarc extends SolrDefault
         }
 
         return $sumHoldings;
+    }
+
+    /**
+     * AK: Check if this record contains a provenance code.
+     * TODO: Get provenance also from Solr index
+     *
+     * @return boolean True if a provenance code exists, false otherwise
+     */
+    public function hasItemProvenance($provenanceConfig = null) {
+        $hasItemProvenance = $this->hasItemProvenanceFromXml($provenanceConfig);
+        return $hasItemProvenance;
+    }
+
+    /**
+     * AK: Get provenance fields.
+     * TODO: Get provenance also from Solr index
+     *
+     * @return array The item provenance fields as array
+     */
+    public function getItemProvenance($provenanceConfig = null) {
+        $itemProvenance = $this->getItemProvenanceFromXml($provenanceConfig);
+        return $itemProvenance;
+    }
+
+    /**
+     * AK: Get information for record banner(s).
+     * TODO: Get information from Solr index
+     *
+     * @param array $recordBannerConfig Record banner config from config.ini as array
+     * 
+     * @return array Array with information for record banner (images, texts) or an
+     *               empty array if no record banner should be displayed.
+     */
+    public function getRecordBanner($recordBannerConfig = null) {
+        // Return if no config is set
+        if ($recordBannerConfig === null) {
+            return [];
+        }
+        
+        $recordBanner = $this->getRecordBannerFromXml($recordBannerConfig);
+        return $recordBanner;
     }
     
 }

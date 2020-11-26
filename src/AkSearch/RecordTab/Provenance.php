@@ -38,6 +38,23 @@ namespace AkSearch\RecordTab;
  */
 class Provenance extends \VuFind\RecordTab\AbstractBase {
 
+
+    /**
+     * [Provenance] config section from config.ini
+     *
+     * @var array
+     */
+    protected $provConfig = null;
+
+    /**
+     * Constructor
+     *
+     * @param array $config [Provenance] config section from config.ini
+     */
+    public function __construct(array $provConfig) {
+        $this->provConfig = $provConfig;
+    }
+
     /**
      * Get the on-screen description for this tab.
      *
@@ -55,6 +72,18 @@ class Provenance extends \VuFind\RecordTab\AbstractBase {
      */
     public function isActive()
     {
-        return true;
+        return empty($this->getRecordDriver()->tryMethod('getItemProvenance'))
+            ? false : true;
+    }
+
+    /**
+     * AK: Get provenance fields.
+     *
+     * @return array The item provenance fields as array
+     */
+    public function getItemProvenance()
+    {
+        return $this->getRecordDriver()->tryMethod('getItemProvenance',
+            [$this->provConfig]);
     }
 }
