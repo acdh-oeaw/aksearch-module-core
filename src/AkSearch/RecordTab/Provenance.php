@@ -51,7 +51,7 @@ class Provenance extends \VuFind\RecordTab\AbstractBase {
      *
      * @param array $config [Provenance] config section from config.ini
      */
-    public function __construct(array $provConfig) {
+    public function __construct(array $provConfig = null) {
         $this->provConfig = $provConfig;
     }
 
