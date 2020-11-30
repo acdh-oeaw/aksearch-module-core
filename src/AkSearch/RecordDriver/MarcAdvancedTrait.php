@@ -923,18 +923,31 @@ trait MarcAdvancedTrait
         
         // Field 695 (BEZ)
         foreach ($fsBEZ as $fBEZ) {
-            //if ($fBEZ['ind1'] == '1') {
-                $name = implode(', ', array_column($fBEZ['subfs'], 'a'));
-                $date = implode(', ', array_column($fBEZ['subfs'], 'd'));
-                $roles = array_column($fBEZ['subfs'], '4');
-                $authId = implode(', ', array_column($fBEZ['subfs'], '0'));
+            $name = implode(', ', array_column($fBEZ['subfs'], 'a'));
+            $date = implode(', ', array_column($fBEZ['subfs'], 'd'));
+            $roles = array_column($fBEZ['subfs'], '4');
+            $authId = implode(', ', array_column($fBEZ['subfs'], '0'));
+
+            // Indicator 1 is "1" (person) or "2" (corporation)
+            if ($fBEZ['ind1'] == '1' || $fBEZ['ind1'] == '2') {
+                foreach ($roles as $role) {
+                    $bezs[] = array_filter([
+                        'name' => $this->stripNonSortingChars($name),
+                        'date' => $date,
+                        'authId' => $authId,
+                        'role' => 'CreatorRoles::'.$role
+                    ]);
+                }
+            }
+            
+            // Indicator 1 is "3" (provenance property)
+            if ($fBEZ['ind1'] == '3') {
                 $bezs[] = array_filter([
                     'name' => $this->stripNonSortingChars($name),
-                    'date' => $date,
                     'authId' => $authId,
-                    'roles' => $roles
+                    'role' => 'provenance_property'
                 ]);
-            //}
+            }
         }
 
         return array_filter([
