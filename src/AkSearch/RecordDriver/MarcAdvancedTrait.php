@@ -857,64 +857,15 @@ trait MarcAdvancedTrait
      *
      * @return boolean True if a provenance code exists, false otherwise
      */
-    public function hasItemProvenance($provenanceConfig = null) {
-        $provField = $provenanceConfig['field'] ?? null ?: null;
-        $provFilter = $provenanceConfig['filter'] ?? [] ?: [];
-        if (!$provField) {
-            return false;
-        }
-        $splittedProvField = explode('|', $provField);
-        if (count($splittedProvField) == 4) {
-            $fieldNo = $splittedProvField[0];
-            $ind1 = (empty($splittedProvField[1])) ? null : $splittedProvField[1];
-            $ind2 = (empty($splittedProvField[2])) ? null : $splittedProvField[2];
-            $subf = $splittedProvField[3];
-        } else {
-            return false;
-        }
-
+    public function hasItemProvenance() {
         // Get provenance fields from the record
-        $provFields = $this->getFieldsAsArray($fieldNo);
-
-        // Return false if there are no ITM fields
-        if (empty($provFields)) {
-            return false;
+        $xmps = $this->getFieldsAsArray('XMP');
+        $result = [];
+        foreach ($xmps as $xmp) {
+            $subfsP = array_column($xmp['subfs'], 'p');
+            $result = array_merge($result, $subfsP);
         }
-
-        // Create result array
-        $provCodes = [];
-
-        // Get values from all subfields "g" from all "ITM" fields
-        foreach ($provFields as $provField) {
-            
-            // Check for indicator 1
-            if ($ind1 != null && $provField['ind1'] != $ind1) {
-                return false;
-            }
-
-            // Check for indicator 2
-            if ($ind2 != null && $provField['ind2'] != $ind2) {
-                return false;
-            }
-
-            // Array column of subfields which contains the provenience code
-            $subfsProv = array_column($provField['subfs'], $subf);
-
-            // Add provenience codes to a result array
-            $provCodes = array_merge($provCodes, $subfsProv);
-        }
-
-        // If we have no provenance codes, return false
-        if (empty($provCodes)) {
-            return false;
-        }
-
-        // Filter the proveniance codes if filters are configured in config.ini
-        if (!empty($provFilter)) {
-            $provCodes = array_intersect($provCodes, $provFilter);
-        }
-
-        return empty($provCodes) ? false : true;
+        return (empty(array_filter($result))) ? false : true;
     }
 
     /**
