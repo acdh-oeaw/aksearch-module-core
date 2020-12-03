@@ -880,18 +880,19 @@ trait MarcAdvancedTrait
         $fsEXL = $this->getFieldsAsArray('EXL'); // = 991
         $fsXMP = $this->getFieldsAsArray('XMP'); // = 992
         $fsBEZ = $this->getFieldsAsArray('BEZ'); // = 695
-        $xmps = [];
-        $bezs = [];
-        $exls = [];
+        $hols = [];
 
         // Field 991 (EXL)
         foreach ($fsEXL as $fEXL) {
+            $holId = array_column($fEXL['subfs'], '8')[0];
             $dimension = implode(', ', array_column($fEXL['subfs'], 'a'));
             $technology = implode(', ', array_column($fEXL['subfs'], 'c'));
             $text = implode(', ', array_column($fEXL['subfs'], 't'));
             $prevOwners = array_column($fEXL['subfs'], 'b');
             $motifs = array_column($fEXL['subfs'], 'm');
-            $exls[] = array_filter([
+            $hols[] = array_filter([
+                'holId' => $holId,
+                'type' => 'exl',
                 'dimension' => $dimension,
                 'technology' => $technology,
                 'text' => $text,
@@ -902,6 +903,7 @@ trait MarcAdvancedTrait
 
         // Field 992 (XMP)
         foreach ($fsXMP as $fXMP) {
+            $holId = array_column($fXMP['subfs'], '8')[0];
             $callNo = implode(', ', array_column($fXMP['subfs'], 'f'));
             $cover = implode(', ', array_column($fXMP['subfs'], 'd'));
             $noteStr = implode(', ', array_column($fXMP['subfs'], 'e'));
@@ -910,7 +912,9 @@ trait MarcAdvancedTrait
             $provenances = array_column($fXMP['subfs'], 'p');
             $lootNote = implode(', ', array_column($fXMP['subfs'], 'q'));
             $restitutionState = implode(', ', array_column($fXMP['subfs'], 'r'));
-            $xmps[] = array_filter([
+            $hols[] = array_filter([
+                'holId' => $holId,
+                'type' => 'xmp',
                 'callNo' => $callNo,
                 'cover' => $cover,
                 'notes' => $notes,
@@ -923,6 +927,7 @@ trait MarcAdvancedTrait
         
         // Field 695 (BEZ)
         foreach ($fsBEZ as $fBEZ) {
+            $holId = array_column($fBEZ['subfs'], '8')[0];
             $name = implode(', ', array_column($fBEZ['subfs'], 'a'));
             $date = implode(', ', array_column($fBEZ['subfs'], 'd'));
             $roles = array_column($fBEZ['subfs'], '4');
@@ -931,30 +936,45 @@ trait MarcAdvancedTrait
             // Indicator 1 is "1" (person) or "2" (corporation)
             if ($fBEZ['ind1'] == '1' || $fBEZ['ind1'] == '2') {
                 foreach ($roles as $role) {
-                    $bezs[] = array_filter([
+                    $hols[] = array_filter([
+                        'holId' => $holId,
+                        'type' => 'bez',
                         'name' => $this->stripNonSortingChars($name),
                         'date' => $date,
                         'authId' => $authId,
-                        'role' => 'CreatorRoles::'.$role
+                        'translateDomain' => 'CreatorRoles',
+                        'searchType' => 'AuthorRoleHol',
+                        'role' => $role
                     ]);
                 }
             }
             
             // Indicator 1 is "3" (provenance property)
             if ($fBEZ['ind1'] == '3') {
-                $bezs[] = array_filter([
+                $hols[] = array_filter([
+                    'holId' => $holId,
+                    'type' => 'bez',
                     'name' => $this->stripNonSortingChars($name),
                     'authId' => $authId,
+                    'searchType' => 'ProvenanceProperty',
                     'role' => 'provenance_property'
                 ]);
             }
         }
 
-        return array_filter([
-            'xmps' => $xmps,
-            'exls' => $exls,
-            'bezs' => $bezs
-        ]);
+        // Use array_filter to clean out empty values
+        $cleanHols = array_filter($hols);
+
+        // Group holdings by holding ID and type
+        $groupedHols = [];
+        foreach ($cleanHols as $cleanHol) {
+            $holId = $cleanHol['holId'];
+            $holType = $cleanHol['type'];
+            $groupedHols[$holId][$holType][] = $cleanHol;
+        }
+
+        // Return result
+        return $groupedHols;
     }
 
     /**
