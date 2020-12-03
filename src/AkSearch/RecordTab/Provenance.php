@@ -82,7 +82,6 @@ class Provenance extends \VuFind\RecordTab\AbstractBase {
      */
     public function getItemProvenance()
     {
-        return $this->getRecordDriver()->tryMethod('getItemProvenance',
-            [$this->provConfig]);
+        return $this->getRecordDriver()->tryMethod('getItemProvenance');
     }
 }
