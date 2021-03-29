@@ -413,6 +413,11 @@ class SolrMarc extends SolrDefault
         // Initialize return variable
         $contributors = [];
 
+        // Initialize other variables
+        $name = null;
+        $role = null;
+        $auth = null;
+
         // Get primary author
         $primaryName = $this->fields['author'][0] ?? null;
         $primaryRole = $this->fields['author_role'][0] ?? null;
@@ -470,15 +475,10 @@ class SolrMarc extends SolrDefault
                 'primary' => true
             ];
         }
-
+        
         // Add secondary person authors to array (values from Marc21 field 700)
         if ($secNames) {
             foreach ($secNames as $key => $value) {
-                // Define variables
-                $name = null;
-                $role = null;
-                $auth = null;
-
                 if (($key % 3) == 0) { // First of 3 values
     				$name = $value;
     			} else if (($key % 3) == 1) { // Second of 3 values
@@ -565,7 +565,21 @@ class SolrMarc extends SolrDefault
      * @return array    An array with information of parent records or null.
      */
     public function getParents() {
+        // Define variables
         $result = [];
+        $title = null;
+        $subTitle = null;
+        $partNo = null;
+        $partName = null;
+        $orderNo = null;
+        $form = null;
+        $level = null;
+        $volNo245 = null;
+        $volNo490 = null;
+        $volNo773 = null;
+        $volNo830 = null;
+        $acNo = null;
+        $id = null;
 
         $solr = $this->fields['parents_txt_mv'] ?? null;
         if ($solr) {
@@ -574,22 +588,6 @@ class SolrMarc extends SolrDefault
                 'NoVolNo773', 'NoVolNo830', 'NoAc', 'NoId'];
 
                 foreach ($solr as $key => $value) {
-
-                    // Define variables
-                    $title = null;
-                    $subTitle = null;
-                    $partNo = null;
-                    $partName = null;
-                    $orderNo = null;
-                    $form = null;
-                    $level = null;
-                    $volNo245 = null;
-                    $volNo490 = null;
-                    $volNo773 = null;
-                    $volNo830 = null;
-                    $acNo = null;
-                    $id = null;
-
                     if (($key % 13) == 0) { // First of 13 values
                         $title = (in_array($value, $defaultSolrValues)) ? null : $value;
                     } else if (($key % 13) == 1) { // Second of 13 values
@@ -706,7 +704,26 @@ class SolrMarc extends SolrDefault
      * @return array    An array with information of child records or null.
      */
     public function getChilds() {
+        // Define variables
         $result = [];
+        $title = null;
+        $subTitle = null;
+        $partTitle = null;
+        $edition = null;
+        $pubYear = null;
+        $relatedPart = null;
+        $enumeration = null;
+        $form = null;
+        $level = null;
+        $volNo = null;
+        $issNo = null;
+        $pgNos = null;
+        $orderNo = null;
+        $depth = null;
+        $fullTextUrl = null;
+        $marker = null;
+        $acNo = null;
+        $id = null;
 
         $solr = $this->fields['childs_txt_mv'] ?? null;
         if ($solr) {
@@ -715,27 +732,6 @@ class SolrMarc extends SolrDefault
                 'NoPg', 'NoOrderNo', 'NoDepth', 'NoUrl', 'NoMarker', 'NoAc', 'NoId'];
 
             foreach ($solr as $key => $value) {
-
-                // Define variables
-                $title = null;
-                $subTitle = null;
-                $partTitle = null;
-                $edition = null;
-                $pubYear = null;
-                $relatedPart = null;
-                $enumeration = null;
-                $form = null;
-                $level = null;
-                $volNo = null;
-                $issNo = null;
-                $pgNos = null;
-                $orderNo = null;
-                $depth = null;
-                $fullTextUrl = null;
-                $marker = null;
-                $acNo = null;
-                $id = null;
-                
     			if (($key % 18) == 0) { // First of 18 values
     				$title = (in_array($value, $defaultSolrValues)) ? null : $value;
     			} else if (($key % 18) == 1) { // Second of 18 values
@@ -1034,7 +1030,21 @@ class SolrMarc extends SolrDefault
      */
     public function getRelations($solrField, $prefix = false, $prefixExclude = null)
     {
+        // Define variables
         $result = [];
+        $title = null;
+        $mainEntry = null;
+        $edition = null;
+        $pubData = null;
+        $relPart = null;
+        $physDesc = null;
+        $relInfo = null;
+        $serData = null;
+        $note = null;
+        $ctrlNo = null;
+        $issn = null;
+        $isbn = null;
+        $id = null;
 
         $solr = $this->fields[$solrField] ?? null;
 
@@ -1045,22 +1055,6 @@ class SolrMarc extends SolrDefault
                 'NoIssn', 'NoIsbn', 'NoId'];
 
             foreach ($solr as $key => $value) {
-
-                // Define variables
-                $title = null;
-                $mainEntry = null;
-                $edition = null;
-                $pubData = null;
-                $relPart = null;
-                $physDesc = null;
-                $relInfo = null;
-                $serData = null;
-                $note = null;
-                $ctrlNo = null;
-                $issn = null;
-                $isbn = null;
-                $id = null;
-
     			if (($key % 13) == 0) { // First of 13 values
                     $title = (in_array($value, $defaultSolrValues)) ? null : $value;
     			} else if (($key % 13) == 1) { // Second of 13 values
