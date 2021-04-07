@@ -40,7 +40,7 @@ use Interop\Container\ContainerInterface;
  *
  * @codeCoverageIgnore
  */
-class UsergroupFactory implements \Zend\ServiceManager\Factory\FactoryInterface
+class UsergroupFactory implements \Laminas\ServiceManager\Factory\FactoryInterface
 {
     /**
      * AK: Create an object
@@ -65,7 +65,7 @@ class UsergroupFactory implements \Zend\ServiceManager\Factory\FactoryInterface
             throw new \Exception('Unexpected options passed to factory.');
         }
         return new $requestedName(
-            $container->get(\ZfcRbac\Service\AuthorizationService::class),
+            $container->get(\LmcRbacMvc\Service\AuthorizationService::class),
             $container->get(\VuFind\ILS\Connection::class),
             $container->get(\VuFind\Cache\Manager::class)
         );

@@ -28,7 +28,7 @@
 namespace AkSearch\View\Helper\Root;
 
 use Interop\Container\ContainerInterface;
-use Zend\ServiceManager\Factory\FactoryInterface;
+use Laminas\ServiceManager\Factory\FactoryInterface;
 
 /**
  * AK: Account menu helper factory.
@@ -64,7 +64,7 @@ class AccountMenuFactory implements FactoryInterface
 
         // AK: Get authorization service
         $authService = $container
-            ->get(\ZfcRbac\Service\AuthorizationService::class);
+            ->get(\LmcRbacMvc\Service\AuthorizationService::class);
 
         // AK: Get [Account] config from config.ini
         $config = $container->get(\VuFind\Config\PluginManager::class);

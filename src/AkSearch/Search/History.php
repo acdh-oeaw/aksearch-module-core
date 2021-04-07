@@ -42,7 +42,7 @@ class History extends \VuFind\Search\History
     /**
      * AK: Class variable for authorization service
      *
-     * @var \ZfcRbac\Service\AuthorizationService
+     * @var \LmcRbacMvc\Service\AuthorizationService
      */
     protected $authService;
 
@@ -53,13 +53,13 @@ class History extends \VuFind\Search\History
      * @param \VuFind\Db\Table\Search               $searchTable    Search table
      * @param string                                $sessionId      Session ID
      * @param \VuFind\Search\Results\PluginManager  $resultsManager Results manager
-     * @param \Zend\Config\Config                   $config         Configuration
-     * @param \ZfcRbac\Service\AuthorizationService $authService    Authorization
+     * @param \Laminas\Config\Config                   $config         Configuration
+     * @param \LmcRbacMvc\Service\AuthorizationService $authService    Authorization
      * service for checking permissions
      */
     public function __construct($searchTable, $sessionId, $resultsManager,
-        \Zend\Config\Config $config = null,
-        \ZfcRbac\Service\AuthorizationService $authService = null
+        \Laminas\Config\Config $config = null,
+        \LmcRbacMvc\Service\AuthorizationService $authService = null
     ) {
         parent::__construct($searchTable, $sessionId, $resultsManager, $config);
         $this->authService = $authService;

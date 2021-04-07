@@ -125,12 +125,12 @@ $config = [
             ],
             'recordtab' => [
                 'factories' => [
-                    'AkSearch\RecordTab\Description' => '\Zend\ServiceManager\Factory\InvokableFactory',
+                    'AkSearch\RecordTab\Description' => '\Laminas\ServiceManager\Factory\InvokableFactory',
                     'AkSearch\RecordTab\HoldingsILS' => 'VuFind\RecordTab\HoldingsILSFactory',
-                    'AkSearch\RecordTab\Parts' => '\Zend\ServiceManager\Factory\InvokableFactory',
+                    'AkSearch\RecordTab\Parts' => '\Laminas\ServiceManager\Factory\InvokableFactory',
                     'AkSearch\RecordTab\Provenance' => 'AkSearch\RecordTab\ProvenanceFactory',
-                    'AkSearch\RecordTab\StaffViewArray' => '\Zend\ServiceManager\Factory\InvokableFactory',
-                    'AkSearch\RecordTab\StaffViewMARC' => '\Zend\ServiceManager\Factory\InvokableFactory'
+                    'AkSearch\RecordTab\StaffViewArray' => '\Laminas\ServiceManager\Factory\InvokableFactory',
+                    'AkSearch\RecordTab\StaffViewMARC' => '\Laminas\ServiceManager\Factory\InvokableFactory'
                 ],
                 'aliases' => [
                     'description' => 'AkSearch\RecordTab\Description',
@@ -165,7 +165,7 @@ $config = [
         ]
     ],
     // AK: Authorization configuration for the usergroup permission provider.
-    'zfc_rbac' => [
+    'lmc_rbac' => [
         'vufind_permission_provider_manager' => [
             'factories' => [
                 'AkSearch\Role\PermissionProvider\Usergroup' => 'AkSearch\Role\PermissionProvider\UsergroupFactory',
