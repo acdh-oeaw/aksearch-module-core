@@ -44,7 +44,7 @@ class SearchController extends \VuFind\Controller\SearchController
      * New item search form
      * AK: Adding facets to the new items search form
      *
-     * @return \Zend\View\Model\ViewModel
+     * @return \Laminas\View\Model\ViewModel
      */
     public function newitemAction()
     {
@@ -98,7 +98,7 @@ class SearchController extends \VuFind\Controller\SearchController
      * New item result list
      * AK: Applying facets from the new items search form
      *
-     * @return \Zend\View\Model\ViewModel
+     * @return \Laminas\View\Model\ViewModel
      */
     public function newitemresultsAction()
     {

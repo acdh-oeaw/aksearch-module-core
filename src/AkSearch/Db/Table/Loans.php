@@ -4,8 +4,8 @@ namespace AkSearch\Db\Table;
 
 use VuFind\Db\Row\RowGateway;
 use VuFind\Db\Table\PluginManager;
-use Zend\Db\Adapter\Adapter;
-use Zend\Db\Sql\Expression;
+use Laminas\Db\Adapter\Adapter;
+use Laminas\Db\Sql\Expression;
 
 class Loans extends \VuFind\Db\Table\Gateway
 {
@@ -32,7 +32,7 @@ class Loans extends \VuFind\Db\Table\Gateway
     /**
      * Get first row of the loans table.
      *
-     * @return \Zend\Db\ResultSet\ResultSet Matching row/result set
+     * @return \Laminas\Db\ResultSet\ResultSet Matching row/result set
      */
     public function selectFirst()
     {

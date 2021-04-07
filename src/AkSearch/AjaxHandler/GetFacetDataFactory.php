@@ -38,7 +38,7 @@ use Interop\Container\ContainerInterface;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:ajax_handlers Wiki
  */
-class GetFacetDataFactory implements \Zend\ServiceManager\Factory\FactoryInterface
+class GetFacetDataFactory implements \Laminas\ServiceManager\Factory\FactoryInterface
 {
     /**
      * Create an object
@@ -66,7 +66,7 @@ class GetFacetDataFactory implements \Zend\ServiceManager\Factory\FactoryInterfa
         // AK: Get "[NewItem]" config from searches.ini
         $searchesConfig
             = $container->get(\VuFind\Config\PluginManager::class)->get('searches');
-        $newItemConfig = $searchesConfig->NewItem ?? new \Zend\Config\Config([]);
+        $newItemConfig = $searchesConfig->NewItem ?? new \Laminas\Config\Config([]);
 
         // AK: Get "[Site]" config from config.ini
         $siteConfig = $container->get(\VuFind\Config\PluginManager::class)

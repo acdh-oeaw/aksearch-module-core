@@ -28,8 +28,8 @@
 namespace AkSearch\AjaxHandler;
 
 use VuFind\Session\Settings as SessionSettings;
-use Zend\Mvc\Controller\Plugin\Params;
-use Zend\View\Renderer\RendererInterface;
+use Laminas\Mvc\Controller\Plugin\Params;
+use Laminas\View\Renderer\RendererInterface;
 
 /**
  * AK: AJAX handler for getting the slide facet template

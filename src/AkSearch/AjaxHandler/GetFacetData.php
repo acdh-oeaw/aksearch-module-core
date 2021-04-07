@@ -30,9 +30,9 @@ namespace AkSearch\AjaxHandler;
 use VuFind\Search\Results\PluginManager as ResultsManager;
 use VuFind\Search\Solr\HierarchicalFacetHelper;
 use VuFind\Session\Settings as SessionSettings;
-use Zend\Mvc\Controller\Plugin\Params;
-use Zend\Stdlib\Parameters;
-use Zend\Config\Config;
+use Laminas\Mvc\Controller\Plugin\Params;
+use Laminas\Stdlib\Parameters;
+use Laminas\Config\Config;
 
 /**
  * AK: "Get Facet Data" AJAX handler. Get hierarchical facet data for slide facets.

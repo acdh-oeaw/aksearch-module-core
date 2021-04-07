@@ -38,7 +38,7 @@ use Interop\Container\ContainerInterface;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:record_tabs Wiki
  */
-class ProvenanceFactory implements \Zend\ServiceManager\Factory\FactoryInterface
+class ProvenanceFactory implements \Laminas\ServiceManager\Factory\FactoryInterface
 {
     /**
      * Create an object

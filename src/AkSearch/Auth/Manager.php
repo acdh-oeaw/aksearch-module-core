@@ -42,7 +42,7 @@ class Manager extends \VuFind\Auth\Manager
      * AK: Change userdata
      *
      * @param array              $patron  Patron information
-     * @param \Zend\Http\Request $request Request object containing form data
+     * @param \Laminas\Http\Request $request Request object containing form data
      * 
      * @return void
      */
@@ -111,7 +111,7 @@ class Manager extends \VuFind\Auth\Manager
      * AK: Get variables for the welcome e-mail that is sent to the user a new
      *     account is created.
      *
-     * @param \Zend\Http\Request  $request    Request object from the form
+     * @param \Laminas\Http\Request  $request    Request object from the form
      * @param \VuFind\Db\Row\User $user       User row object from the database
      * @param string              $authMethod Authentication method (optional)
      * 
@@ -128,7 +128,7 @@ class Manager extends \VuFind\Auth\Manager
      * AK: Get variables for the e-mail that is sent to the library when a new user
      *     account is created.
      *
-     * @param \Zend\Http\Request  $request    Request object from the form
+     * @param \Laminas\Http\Request  $request    Request object from the form
      * @param \VuFind\Db\Row\User $user       User row object from the database
      * @param string              $authMethod Authentication method (optional)
      * 

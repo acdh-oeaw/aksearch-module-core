@@ -28,7 +28,7 @@
 
 namespace AkSearch\Controller\Plugin;
 
-use Zend\Config\Config;
+use Laminas\Config\Config;
 /**
  * AK: Extending action helper to perform new items-related actions
  *

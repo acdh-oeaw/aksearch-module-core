@@ -46,7 +46,7 @@ class ContentController extends \VuFind\Controller\ContentController
      *  - Added access restrictions via permissions.ini
      *  - Added possibility to pass variables to content page from config.ini
      *
-     * @return Zend\View\Model\ViewModel
+     * @return Laminas\View\Model\ViewModel
      */
     public function contentAction()
     {
@@ -64,7 +64,7 @@ class ContentController extends \VuFind\Controller\ContentController
         }
 
         $themeInfo = $this->serviceLocator->get(\VuFindTheme\ThemeInfo::class);
-        $language = $this->serviceLocator->get(\Zend\Mvc\I18n\Translator::class)
+        $language = $this->serviceLocator->get(\Laminas\Mvc\I18n\Translator::class)
             ->getLocale();
         $defaultLanguage = $this->getConfig()->Site->language;
 

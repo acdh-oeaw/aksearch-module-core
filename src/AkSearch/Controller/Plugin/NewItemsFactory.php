@@ -63,7 +63,7 @@ class NewItemsFactory extends \VuFind\Controller\Plugin\NewItemsFactory
         }
         $search
             = $container->get(\VuFind\Config\PluginManager::class)->get('searches');
-        $config = $search->NewItem ?? new \Zend\Config\Config([]);
+        $config = $search->NewItem ?? new \Laminas\Config\Config([]);
 
         // AK: Add site config
         $siteConfig = $container->get(\VuFind\Config\PluginManager::class)

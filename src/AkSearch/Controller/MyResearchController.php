@@ -267,7 +267,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     /**
      * AK: Send e-mail to library if account was created successfully for a patron.
      * 
-     * @param \Zend\Http\Request  $request Request object from the form
+     * @param \Laminas\Http\Request  $request Request object from the form
      * @param \VuFind\Db\Row\User $user    User row object from the database
      * 
      * @throws \VuFind\Exception\Mail
@@ -315,7 +315,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     /**
      * AK: Send e-mail to user if account was created successfully.
      * 
-     * @param \Zend\Http\Request  $request Request object from the form
+     * @param \Laminas\Http\Request  $request Request object from the form
      * @param \VuFind\Db\Row\User $user    User row object from the database
      * 
      * @throws \VuFind\Exception\Mail
@@ -364,19 +364,19 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
      * AK: Removes attachments with errors. For the remaining attachments: Checks if
      *     they have an accepted mime type and if they are of an accepted file size.
      *
-     * @param \Zend\Stdlib\Parameters $attachments The file object from the request
+     * @param \Laminas\Stdlib\Parameters $attachments The file object from the request
      * 
      * @throws AuthException
      * 
-     * @return \Zend\Stdlib\Parameters Valid attachments
+     * @return \Laminas\Stdlib\Parameters Valid attachments
      */
     protected function checkAttachments($attachments)
     {
         // Create new parameters object for attachements without errors. Erroneous
         // attachments are mainly from empty file pickers in the form where no file
         // was chosen.
-        $atts = new \Zend\Stdlib\Parameters();
-        $uploadFileValidator = new \Zend\Validator\File\UploadFile();
+        $atts = new \Laminas\Stdlib\Parameters();
+        $uploadFileValidator = new \Laminas\Validator\File\UploadFile();
         foreach ($attachments as $key => $attachment) {
             $isValid = $uploadFileValidator->isValid($attachment);
             if ($isValid) {
@@ -400,7 +400,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         foreach ($atts as $att) {
             // Validate mime type
             if ($allowedMimeTypes) {
-                $mimeTypeValidator = new \Zend\Validator\File\MimeType(
+                $mimeTypeValidator = new \Laminas\Validator\File\MimeType(
                     $allowedMimeTypes
                 );
                 if (!$mimeTypeValidator->isValid($att)) {
@@ -409,7 +409,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             }
 
             // Validate size
-            $sizeValidator = new \Zend\Validator\File\Size(['max' => $allowedSize]);
+            $sizeValidator = new \Laminas\Validator\File\Size(['max' => $allowedSize]);
             if (!$sizeValidator->isValid($att)) {
                 throw new AuthException('sizeError');
             }
@@ -421,7 +421,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     /**
      * Display loan history page for current user
      *
-     * @return mixed Returns \Zend\View\Model\ViewModel or Response when exporting
+     * @return mixed Returns \Laminas\View\Model\ViewModel or Response when exporting
      *               to CSV
      */
     public function historicloansAction()
@@ -641,12 +641,12 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
      * Execute the request
      * AK: Also get technical failure message on whoops error pages
      *
-     * @param \Zend\Mvc\MvcEvent $event Event
+     * @param \Laminas\Mvc\MvcEvent $event Event
      *
      * @return mixed
      * @throws Exception\DomainException
      */
-    public function onDispatch(\Zend\Mvc\MvcEvent $event)
+    public function onDispatch(\Laminas\Mvc\MvcEvent $event)
     {
         // Catch any ILSExceptions thrown during processing and display a generic
         // failure message to the user (instead of going to the fatal exception

@@ -39,7 +39,7 @@ use Interop\Container\ContainerInterface;
  * @link     https://vufind.org/wiki/development:plugins:ajax_handlers Wiki
  */
 class GetSlideFacetTemplateFactory implements
-    \Zend\ServiceManager\Factory\FactoryInterface {
+    \Laminas\ServiceManager\Factory\FactoryInterface {
 
     /**
      * Create an object

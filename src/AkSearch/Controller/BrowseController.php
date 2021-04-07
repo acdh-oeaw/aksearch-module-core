@@ -28,8 +28,8 @@
 namespace AkSearch\Controller;
 
 //use VuFind\Exception\Forbidden as ForbiddenException;
-use Zend\Config\Config;
-use Zend\ServiceManager\ServiceLocatorInterface;
+use Laminas\Config\Config;
+use Laminas\ServiceManager\ServiceLocatorInterface;
 
 /**
  * AK: Extending default BrowseController Class
@@ -46,7 +46,7 @@ class BrowseController extends \VuFind\Controller\BrowseController
     /**
      * AK: Get Custom solrfield config
      *
-     * @var \Zend\Config\Config
+     * @var \Laminas\Config\Config
      */
     protected $solrfield;
 

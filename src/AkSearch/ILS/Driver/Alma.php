@@ -886,7 +886,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
      * AK: Change userdata in Alma
      *
      * @param array              $patron  Patron information
-     * @param \Zend\Http\Request $request Request object containing form data
+     * @param \Laminas\Http\Request $request Request object containing form data
      * 
      * @return void
      */

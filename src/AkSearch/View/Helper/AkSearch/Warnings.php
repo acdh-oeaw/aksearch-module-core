@@ -36,7 +36,7 @@ namespace AkSearch\View\Helper\AkSearch;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:view_helpers Wiki
  */
-class Warnings extends \Zend\View\Helper\AbstractHelper
+class Warnings extends \Laminas\View\Helper\AbstractHelper
 {
     /**
      * AK: The [Warnings] section in config.ini

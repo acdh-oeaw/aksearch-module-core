@@ -28,7 +28,7 @@
 namespace AkSearch\Mailer;
 
 use VuFind\Exception\Mail as MailException;
-use Zend\Mail\Address;
+use Laminas\Mail\Address;
 
 /**
  * AK: Extended VuFind Mailer Class
@@ -72,7 +72,7 @@ class Mailer extends \VuFind\Mailer\Mailer
                 throw new MailException('Too Many Email Recipients');
             }
         }
-        $validator = new \Zend\Validator\EmailAddress();
+        $validator = new \Laminas\Validator\EmailAddress();
         if (count($recipients) == 0) {
             throw new MailException('Invalid Recipient Email Address');
         }
@@ -107,25 +107,25 @@ class Mailer extends \VuFind\Mailer\Mailer
             $from = new Address($this->fromAddressOverride, $name);
         }
 
-        $mimeMessage = new \Zend\Mime\Message();
+        $mimeMessage = new \Laminas\Mime\Message();
         $mimeParts = [];
 
         // AK: Content part (HTML)
-        $htmlPart = new \Zend\Mime\Part($body);
-        $htmlPart->type = \Zend\Mime\Mime::TYPE_HTML;
+        $htmlPart = new \Laminas\Mime\Part($body);
+        $htmlPart->type = \Laminas\Mime\Mime::TYPE_HTML;
         $htmlPart->charset = 'utf-8';
-        $htmlPart->setEncoding(\Zend\Mime\Mime::ENCODING_BASE64);
+        $htmlPart->setEncoding(\Laminas\Mime\Mime::ENCODING_BASE64);
         $mimeParts[] = $htmlPart;
 
         // AK: Attachment part(s) if there are any
         if ($atts !== null) {
             foreach ($atts as $att) {
                 $fileContents = fopen($att['tmp_name'], 'r');
-                $attPart = new \Zend\Mime\Part($fileContents);
+                $attPart = new \Laminas\Mime\Part($fileContents);
                 $attPart->type = $att['type'];
                 $attPart->filename = $att['name'];
-                $attPart->disposition = \Zend\Mime\Mime::DISPOSITION_ATTACHMENT;
-                $attPart->encoding = \Zend\Mime\Mime::ENCODING_BASE64;
+                $attPart->disposition = \Laminas\Mime\Mime::DISPOSITION_ATTACHMENT;
+                $attPart->encoding = \Laminas\Mime\Mime::ENCODING_BASE64;
                 $mimeParts[] = $attPart;
             }
         }
@@ -161,14 +161,14 @@ class Mailer extends \VuFind\Mailer\Mailer
     /**
      * AK: Get new message for HTML
      *
-     * @return \Zend\Mail\Message   A new message object for HTML
+     * @return \Laminas\Mail\Message   A new message object for HTML
      */
     public function getNewHtmlMessage()
     {
-        $message = new \Zend\Mail\Message();
+        $message = new \Laminas\Mail\Message();
         $message->setEncoding('UTF-8');
         $headers = $message->getHeaders();
-        $contentType = new \Zend\Mail\Header\ContentType();
+        $contentType = new \Laminas\Mail\Header\ContentType();
         $contentType->setType('text/html');
         $contentType->addParameter('charset', 'UTF-8');
         $headers->addHeader($contentType);

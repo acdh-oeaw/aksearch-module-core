@@ -41,7 +41,7 @@ class AlmaController extends \VuFind\Controller\AlmaController
     /**
      * Action that is executed when the webhook page is called.
      *
-     * @return \Zend\Http\Response|NULL
+     * @return \Laminas\Http\Response|NULL
      */
     public function webhookAction()
     {
@@ -265,7 +265,7 @@ class AlmaController extends \VuFind\Controller\AlmaController
      *
      * @param \VuFind\Db\Row\User $user   A user row object from the VuFind
      *                                    user table.
-     * @param \Zend\Config\Config $config A config object of config.ini
+     * @param \Laminas\Config\Config $config A config object of config.ini
      *
      * @return void
      */

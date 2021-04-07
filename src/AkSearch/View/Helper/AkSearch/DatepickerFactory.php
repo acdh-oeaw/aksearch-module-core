@@ -28,7 +28,7 @@
 namespace AkSearch\View\Helper\AkSearch;
 
 use Interop\Container\ContainerInterface;
-use Zend\ServiceManager\Factory\FactoryInterface;
+use Laminas\ServiceManager\Factory\FactoryInterface;
 
 /**
  * AK: Datepicker helper factory.
@@ -64,7 +64,7 @@ class DatepickerFactory implements FactoryInterface
         $config = $container->get(\VuFind\Config\PluginManager::class);
         $mainConfig = $config->get('config');
         $siteConfig = isset($mainConfig->Site) ? $mainConfig->Site->toArray() : [];
-        $activerUserLanguage = $container->get(\Zend\Mvc\I18n\Translator::class)
+        $activerUserLanguage = $container->get(\Laminas\Mvc\I18n\Translator::class)
             ->getLocale();
         return new $requestedName(
             $siteConfig,

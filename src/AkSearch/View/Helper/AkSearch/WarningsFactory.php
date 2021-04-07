@@ -28,7 +28,7 @@
 namespace AkSearch\View\Helper\AkSearch;
 
 use Interop\Container\ContainerInterface;
-use Zend\ServiceManager\Factory\FactoryInterface;
+use Laminas\ServiceManager\Factory\FactoryInterface;
 
 /**
  * AK: Warnings helper factory.

@@ -46,7 +46,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
     /**
      * Create a new user account in Alma AND in the VuFind Database.
      *
-     * @param \Zend\Http\Request $request Request object containing new account
+     * @param \Laminas\Http\Request $request Request object containing new account
      * details.
      *
      * @return null|\VuFind\Db\Row\User New user row.
@@ -180,7 +180,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
      * AK: Change userdata in Alma and in VuFind database
      *
      * @param array              $patron  Patron information
-     * @param \Zend\Http\Request $request Request object containing form data
+     * @param \Laminas\Http\Request $request Request object containing form data
      * 
      * @return void
      */
@@ -192,7 +192,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
         $userTable = $this->getUserTable();
 
         // Invalid Email Check
-        $validator = new \Zend\Validator\EmailAddress();
+        $validator = new \Laminas\Validator\EmailAddress();
         if (!$validator->isValid($params['email'])) {
             throw new AuthException('Email address is invalid');
         }
@@ -266,7 +266,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
      * AK: Get variables for the e-mail that is sent to the user when a new account
      *     is created.
      *
-     * @param \Zend\Http\Request  $request  Request object from the form
+     * @param \Laminas\Http\Request  $request  Request object from the form
      * @param \VuFind\Db\Row\User $user     User row object from the database
      * 
      * @return array Array with keys 'subject' and 'text' holding values that can be
@@ -312,7 +312,7 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
      * AK: Get variables for the e-mail that is sent to the library when a new user
      *     account is created.
      *
-     * @param \Zend\Http\Request  $request  Request object from the form
+     * @param \Laminas\Http\Request  $request  Request object from the form
      * @param \VuFind\Db\Row\User $user     User row object from the database
      * 
      * @return array Array with keys 'subject' and 'text' holding values that can be
