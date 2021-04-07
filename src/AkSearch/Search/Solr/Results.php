@@ -137,6 +137,7 @@ class Results extends \VuFind\Search\Solr\Results
         // Loop through every field returned by the result set
         $fieldFacets = $this->responseFacets->getFieldFacets();
         $translatedFacets = $this->getOptions()->getTranslatedFacets();
+        $hierarchicalFacets = $this->getOptions()->getHierarchicalFacets();
         foreach (array_keys($filter) as $field) {
             $data = $fieldFacets[$field] ?? [];
             // Skip empty arrays:
@@ -168,6 +169,7 @@ class Results extends \VuFind\Search\Solr\Results
                 $translateTextDomain = $this->getOptions()
                     ->getTextDomainForTranslatedFacet($field);
             }
+            $hierarchical = in_array($field, $hierarchicalFacets);
             // Loop through values:
             foreach ($data as $value => $count) {
 
@@ -187,9 +189,20 @@ class Results extends \VuFind\Search\Solr\Results
                 $displayText = $this->getParams()
                     ->checkForDelimitedFacetDisplayText($field, $value);
 
+                if ($hierarchical) {
+                    if (!$this->hierarchicalFacetHelper) {
+                        throw new \Exception(
+                            get_class($this)
+                            . ': hierarchical facet helper unavailable'
+                        );
+                    }
+                    $displayText = $this->hierarchicalFacetHelper
+                        ->formatDisplayText($displayText);
+                }
                 $currentSettings['displayText'] = $translate
-                    ? $this->translate("$translateTextDomain::$displayText")
+                    ? $this->translate([$translateTextDomain, $displayText])
                     : $displayText;
+
                 $currentSettings['count'] = $count;
                 $currentSettings['operator']
                     = $this->getParams()->getFacetOperator($field);

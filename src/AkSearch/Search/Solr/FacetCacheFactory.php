@@ -65,11 +65,13 @@ class FacetCacheFactory extends \VuFind\Search\Solr\FacetCacheFactory
         $requestedNamespace = $parts[count($parts) - 2];
         $results = $this->getResults($container, $requestedNamespace);
         $cacheManager = $container->get(\VuFind\Cache\Manager::class);
-        $language = $container->get(\Laminas\Mvc\I18n\Translator::class)->getLocale();
+        $language = $container->get(\Laminas\Mvc\I18n\Translator::class)
+            ->getLocale();
 
         // AK: Create authorization service for passing it to
         // \AkSearch\Search\Solr\FacetCache below
-        $authService = $container->get(\LmcRbacMvc\Service\AuthorizationService::class);
+        $authService = $container
+            ->get(\LmcRbacMvc\Service\AuthorizationService::class);
         
         // AK: Get facets.ini configs for passing it to
         // \AkSearch\Search\Solr\FacetCache below

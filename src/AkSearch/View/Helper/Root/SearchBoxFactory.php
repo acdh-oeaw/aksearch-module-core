@@ -28,6 +28,9 @@
 namespace AkSearch\View\Helper\Root;
 
 use Interop\Container\ContainerInterface;
+use Interop\Container\Exception\ContainerException;
+use Laminas\ServiceManager\Exception\ServiceNotCreatedException;
+use Laminas\ServiceManager\Exception\ServiceNotFoundException;
 
 /**
  * AK: Extending SearchBox helper factory.
@@ -41,7 +44,9 @@ use Interop\Container\ContainerInterface;
 class SearchBoxFactory extends \VuFind\View\Helper\Root\SearchBoxFactory
 {
     /**
-     * AK: Create an object
+     * Create an object
+     * 
+     * AK: Pass additional data to the SearchBox object.
      *
      * @param ContainerInterface $container     Service manager
      * @param string             $requestedName Service being created

@@ -60,7 +60,7 @@ class SolrDefault extends \VuFind\RecordDriver\SolrDefault
         'author', 'title', 'title_short', 'title_full',
         'title_full_unstemmed', 'title_auth', 'title_sub', 'spelling', 'id',
         'ctrlnum', 'author_variant', 'author2_variant', 'fullrecord',
-        'title_partNo_txt', 'title_part_txt'
+        'work_keys_str_mv', 'title_partNo_txt', 'title_part_txt'
     ];
 
     /**

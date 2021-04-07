@@ -65,12 +65,14 @@ class HistoryFactory extends \VuFind\Search\HistoryFactory
             ->get('Search');
         $resultsManager = $container
             ->get(\VuFind\Search\Results\PluginManager::class);
-        $sessionId = $container->get(\Laminas\Session\SessionManager::class)->getId();
+        $sessionId = $container->get(\Laminas\Session\SessionManager::class)
+            ->getId();
         $cfg = $container->get(\VuFind\Config\PluginManager::class)->get('config');
 
         // AK: Create authorization service for passing it to
         // \AkSearch\Search\History below
-        $authService = $container->get(\LmcRbacMvc\Service\AuthorizationService::class);
+        $authService = $container
+            ->get(\LmcRbacMvc\Service\AuthorizationService::class);
 
         // AK: Pass also the authorization service to the History class
         return new $requestedName($searchTable, $sessionId, $resultsManager, $cfg,

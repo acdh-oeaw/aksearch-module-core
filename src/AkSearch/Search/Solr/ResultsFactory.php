@@ -69,7 +69,13 @@ class ResultsFactory extends \VuFind\Search\Solr\ResultsFactory
         $options[] = $facetConfigs;
 
         $solr = parent::__invoke($container, $requestedName, $options);
-
+        $config = $configLoader->get('config');
+        $solr->setSpellingProcessor(
+            new \VuFind\Search\Solr\SpellingProcessor($config->Spelling ?? null)
+        );
+        $solr->setHierarchicalFacetHelper(
+            $container->get(\VuFind\Search\Solr\HierarchicalFacetHelper::class)
+        );
         return $solr;
     }
 }

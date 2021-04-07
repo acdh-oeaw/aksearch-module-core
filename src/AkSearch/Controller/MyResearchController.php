@@ -73,14 +73,14 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         $view->passwordPolicy = $this->getAuthManager()
             ->getPasswordPolicy($method);
 
-        // Set up reCaptcha
-        $view->useRecaptcha = $this->recaptcha()->active('newAccount');
+        // Set up Captcha
+        $view->useCaptcha = $this->captcha()->active('newAccount');
 
         // Pass request to view so we can repopulate user parameters in form:
         $view->request = $this->getRequest()->getPost();
 
         // Process request, if necessary:
-        if ($this->formWasSubmitted('submit', $view->useRecaptcha)) {
+        if ($this->formWasSubmitted('submit', $view->useCaptcha)) {
             try {
                 // AK: Get the request object
                 $request = $this->getRequest();
@@ -175,8 +175,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         }
 
         $config = $this->getConfig();
-        $page = isset($config->Site->defaultAccountPage)
-            ? $config->Site->defaultAccountPage : 'Favorites';
+        $page = $config->Site->defaultAccountPage ?? 'Favorites';
 
         // Default to search history if favorites are disabled:
         if ($page == 'Favorites' && !$this->listsEnabled()) {
@@ -518,7 +517,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         // Get paging setup:
         $config = $this->getConfig();
         $pageOptions = $this->getPaginationHelper()->getOptions(
-            (int) $this->params()->fromQuery('page', 1),
+            (int)$this->params()->fromQuery('page', 1),
             $this->params()->fromQuery('sort'),
             $config->Catalog->historic_loan_page_size ?? 50,
             $functionConfig
@@ -534,9 +533,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         }
 
         $paginator = $this->getPaginationHelper()->getPaginator(
-            $pageOptions,
-            $result['count'],
-            $result['transactions']
+            $pageOptions, $result['count'], $result['transactions']
         );
         if ($paginator) {
             $pageStart = $paginator->getAbsoluteItemNumber(1) - 1;
@@ -562,12 +559,8 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
         // AK: Create the view model
         $view = $this->createViewModel(
             compact(
-                'transactions',
-                'paginator',
-                'params',
-                'hiddenTransactions',
-                'sortList',
-                'functionConfig'
+                'transactions', 'paginator', 'params', 'hiddenTransactions',
+                'sortList', 'functionConfig'
             )
         );
 

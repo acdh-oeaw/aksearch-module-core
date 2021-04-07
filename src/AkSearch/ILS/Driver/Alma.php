@@ -86,7 +86,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
         // The path for the API call. We call "ALL" available items, but not at once
         // as a pagination mechanism is used. If paging params are not set for some
         // reason, the first 10 items are called which is the default API behaviour.
-        $itemsPath = '/bibs/' . urlencode($id) . '/holdings/ALL/items?'
+        $itemsPath = '/bibs/' . rawurlencode($id) . '/holdings/ALL/items?'
             . $apiPagingParams
             . '&order_by=library,enum_a,enum_b,location'
             . '&direction=desc'
@@ -491,9 +491,9 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
         $level = $data['level'] ?? 'copy';
         if ('copy' === $level) {
             // Call the request-options API for the logged-in user
-            $requestOptionsPath = '/bibs/' . urlencode($id)
-                . '/holdings/' . urlencode($data['holding_id']) . '/items/'
-                . urlencode($data['item_id']) . '/request-options?user_id='
+            $requestOptionsPath = '/bibs/' . rawurlencode($id)
+                . '/holdings/' . rawurlencode($data['holding_id']) . '/items/'
+                . rawurlencode($data['item_id']) . '/request-options?user_id='
                 . urlencode($patronId);
 
             // Make the API request
@@ -504,7 +504,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                 return false;
             }
             // Call the request-options API for the logged-in user
-            $requestOptionsPath = '/bibs/' . urlencode($id)
+            $requestOptionsPath = '/bibs/' . rawurlencode($id)
                 . '/request-options?user_id=' . urlencode($patronId);
 
             // Make the API request
@@ -558,7 +558,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             ) {
                 $errorMessage = 'Configuration "' . $configParam . '" is not set ' .
                     'in Alma.ini in the [NewUser] section!';
-                error_log('[ALMA]: ' . $errorMessage);
+                $this->logError($errorMessage);
                 throw new \VuFind\Exception\Auth($errorMessage);
             }
         }
@@ -716,7 +716,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             ['Content-Type' => 'application/xml']
         );
 
-        // Return the XML anser from Alma on success. On error, an exception is
+        // Return the XML answer from Alma on success. On error, an exception is
         // thrown in makeRequest.
         return $almaAnswer;
     }
@@ -764,7 +764,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
     public function getMyProfile($patron)
     {
         $patronId = $patron['cat_username'];
-        $xml = $this->makeRequest('/users/' . $patronId);
+        $xml = $this->makeRequest('/users/' . rawurlencode($patronId));
         if (empty($xml)) {
             return [];
         }
@@ -777,8 +777,11 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             'lastname'          => (isset($xml->last_name))
                 ? (string) $xml->last_name
                 : null,
-            'group'             => (isset($xml->user_group['desc']))
+            /*'group'             => (isset($xml->user_group['desc']))
                 ? (string) $xml->user_group['desc']
+                : null,*/
+            'group'             => isset($xml->user_group)
+                ? $this->getTranslatableString($xml->user_group)
                 : null,
             'group_code'        => (isset($xml->user_group))
                 ? (string) $xml->user_group
@@ -858,7 +861,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             // that we don't have duplicate phone numbers in the view
             $mobileNo = ($mobileNo == $phoneNo) ? null : $mobileNo;
 
-            // Set mobile phone number to return array
+            // AK: Set mobile phone number to return array
             $profile['mobile_phone'] = $mobileNo;
         }
 
@@ -1091,8 +1094,8 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
         } catch (\Exception $e) {
             $errorMessage = 'Error when retrieving loans for user '
                 . $patron['cat_username'] . '.';
-            error_log($errorMessage . ' Check if the database for saving loans '
-                . 'exists and is configured properly. Exception Message: '
+            $this->logError($errorMessage . ' Check if the database for saving '
+                . 'loans exists and is configured properly. Exception Message: '
                 . $e->getMessage());
             throw new \VuFind\Exception\ILS($errorMessage);
         }
@@ -1587,8 +1590,8 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             } catch (\Exception $exception) {
                 $errorMessage = 'Configuration "expiryDate" in Alma.ini (see ' .
                     '[NewUser] section) has the wrong format!';
-                error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
-                    . $exception->getMessage());
+                $this->logError($errorMessage . '. Exception message: '
+                . $exception->getMessage());
                 throw new \VuFind\Exception\Auth($errorMessage);
             }
         } else {
@@ -1628,7 +1631,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             } catch (\Exception $exception) {
                 $errorMessage = 'Configuration "purgeDate" in Alma.ini (see ' .
                     '[NewUser] section) has the wrong format!';
-                error_log('[ALMA]: ' . $errorMessage . '. Exception message: '
+                $this->logError($errorMessage . '. Exception message: '
                     . $exception->getMessage());
                 throw new \VuFind\Exception\Auth($errorMessage);
             }

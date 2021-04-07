@@ -51,9 +51,10 @@ class SolrDefaultBackendFactory extends
     protected function createConnector()
     {
         $config = $this->config->get($this->mainConfig);
+        $searchConfig = $this->config->get($this->searchConfig);
+        $defaultFields = $searchConfig->General->default_record_fields ?? '*';
 
         // AK: Get configuration for ID fields to use for retrieving single records
-        $searchConfig = $this->config->get($this->searchConfig);
         $idFields = (
                 isset($searchConfig->AkSearch->idFields)
                 && !empty($searchConfig->AkSearch->idFields)
@@ -65,7 +66,7 @@ class SolrDefaultBackendFactory extends
         $handlers = [
             'select' => [
                 'fallback' => true,
-                'defaults' => ['fl' => '*,score'],
+                'defaults' => ['fl' => $defaultFields],
                 'appends'  => ['fq' => []],
             ],
             'terms' => [
@@ -85,7 +86,7 @@ class SolrDefaultBackendFactory extends
         );
 
         $connector->setTimeout(
-            isset($config->Index->timeout) ? $config->Index->timeout : 30
+            $config->Index->timeout ?? 30
         );
 
         if ($this->logger) {

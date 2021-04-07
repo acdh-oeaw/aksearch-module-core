@@ -67,6 +67,7 @@ class History extends \VuFind\Search\History
 
     /**
      * Get a list of scheduling options (empty list if scheduling disabled).
+     * 
      * AK: Also return emtpy list if permission is not granted to show the options,
      * but always allow if called from command line.
      *

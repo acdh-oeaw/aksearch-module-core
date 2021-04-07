@@ -47,6 +47,7 @@ class Manager extends \VuFind\Auth\Manager
      * @return void
      */
     public function changeUserdata($patron, $request) {
+        // TODO: To avoid linter errors, we could extend VuFind\Auth\AbstractBase
         $this->getAuth()->changeUserdata($patron, $request);
     }
 

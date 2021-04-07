@@ -28,7 +28,6 @@
 namespace AkSearch\Recommend;
 
 use VuFind\Search\Solr\HierarchicalFacetHelper;
-use VuFind\Solr\Utils as SolrUtils;
 
 /**
  * AK: Extending SideFacets Recommendations Module
@@ -43,14 +42,6 @@ use VuFind\Solr\Utils as SolrUtils;
  */
 class SideFacets extends \VuFind\Recommend\SideFacets
 {
-
-    /**
-     * AK: Config for nested sliding facets
-     *
-     * @var array
-     */
-    //protected $nestedSlidingFacets;
-    
     /**
      * AK: Config for nested sliding facets
      *
