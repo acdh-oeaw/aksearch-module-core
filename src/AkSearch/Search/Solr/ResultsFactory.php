@@ -58,7 +58,7 @@ class ResultsFactory extends \VuFind\Search\Solr\ResultsFactory
         array $options = null
     ) {
         // AK: Create authorization service
-        $authService = $container->get(\ZfcRbac\Service\AuthorizationService::class);
+        $authService = $container->get(\LmcRbacMvc\Service\AuthorizationService::class);
         
         // AK: Get facets.ini configs
         $configLoader = $container->get(\VuFind\Config\PluginManager::class);

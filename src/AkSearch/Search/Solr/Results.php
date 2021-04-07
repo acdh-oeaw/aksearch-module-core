@@ -47,7 +47,7 @@ class Results extends \VuFind\Search\Solr\Results
     /**
      * AK: Class variable for authorization service
      *
-     * @var \ZfcRbac\Service\AuthorizationService
+     * @var \LmcRbacMvc\Service\AuthorizationService
      */
     protected $authService;
 
@@ -80,7 +80,7 @@ class Results extends \VuFind\Search\Solr\Results
         Params $params,
         \VuFindSearch\Service $searchService,
         \VuFind\Record\Loader $recordLoader,
-        \ZfcRbac\Service\AuthorizationService $authService = null,
+        \LmcRbacMvc\Service\AuthorizationService $authService = null,
         array $facetConfigs = null
 
     ) {

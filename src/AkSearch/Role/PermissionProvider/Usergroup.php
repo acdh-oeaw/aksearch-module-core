@@ -26,7 +26,7 @@
  * @link     https://vufind.org/wiki/development:plugins:permission_providers Wiki
  */
 namespace AkSearch\Role\PermissionProvider;
-use ZfcRbac\Service\AuthorizationService;
+use LmcRbacMvc\Service\AuthorizationService;
 use VuFind\ILS\Connection;
 use VuFind\Role\PermissionProvider\PermissionProviderInterface as PermissionProviderInterface;
 use VuFind\Cache\Manager as CacheManager;

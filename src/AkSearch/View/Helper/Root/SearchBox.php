@@ -47,7 +47,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
     /**
      * AK: Class variable for authorization service
      *
-     * @var \ZfcRbac\Service\AuthorizationService
+     * @var \LmcRbacMvc\Service\AuthorizationService
      */
     protected $authService;
 
@@ -80,10 +80,10 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
 
         // AK: Creating authorization service for checking permissions from
         //     permissions.ini
-        //     TODO: Get only \ZfcRbac\Service\AuthorizationService passed from
+        //     TODO: Get only \LmcRbacMvc\Service\AuthorizationService passed from
         //           SearchBoxFactory instead of whole container object!
         $this->authService = $container
-            ->get(\ZfcRbac\Service\AuthorizationService::class);
+            ->get(\LmcRbacMvc\Service\AuthorizationService::class);
         if (!$this->authService) {
             throw new \Exception('Authorization service missing');
         }

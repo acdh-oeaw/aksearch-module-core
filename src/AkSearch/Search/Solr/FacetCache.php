@@ -52,7 +52,7 @@ class FacetCache extends \VuFind\Search\Solr\FacetCache
     /**
      * AK: Class variable for authorization service
      *
-     * @var \ZfcRbac\Service\AuthorizationService
+     * @var \LmcRbacMvc\Service\AuthorizationService
      */
     protected $authService;
 
@@ -71,14 +71,14 @@ class FacetCache extends \VuFind\Search\Solr\FacetCache
      * @param Results                               $r           Search results object
      * @param \VuFind\Cache\Manager                 $cm          Cache manager
      * @param string                                $language    Active UI language
-     * @param \ZfcRbac\Service\AuthorizationService $authService Authorization service for checking permissions
+     * @param \LmcRbacMvc\Service\AuthorizationService $authService Authorization service for checking permissions
      * @param array                                 $facetConfig Configs from facets.ini as array
      */
     public function __construct(
         Results $r,
         \VuFind\Cache\Manager $cm,
         $language = 'en',
-        \ZfcRbac\Service\AuthorizationService $authService = null,
+        \LmcRbacMvc\Service\AuthorizationService $authService = null,
         array $facetConfigs = null
     ) {
         $this->results = $r;

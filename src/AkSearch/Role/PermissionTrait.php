@@ -42,7 +42,7 @@ trait PermissionTrait
     /**
      * AK: Check permissions for the given search value
      *
-     * @param \ZfcRbac\Service\AuthorizationService $authService
+     * @param \LmcRbacMvc\Service\AuthorizationService $authService
      * @param array    $permissionsConfig [Permissions] configs as array in format:
      *                                    permission.name1 =>
      *                                      array(0 => value1, 1 => value2, ...),
