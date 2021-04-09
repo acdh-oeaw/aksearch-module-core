@@ -227,10 +227,10 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             $view->auth_method = $this->getAuthManager()->getAuthMethod();
 
             // Use recaptacha when set in config
-            $view->useRecaptcha = $this->recaptcha()->active('changeUserdata');
+            $view->useCaptcha = $this->captcha()->active('changeUserdata');
 
             // If form was submitted
-            if ($this->formWasSubmitted('submit', $view->useRecaptcha)) {
+            if ($this->formWasSubmitted('submit', $view->useCaptcha)) {
                 try {
                     // Change userdata for the particular auth method
                     $this->getAuthManager()->changeUserdata($patron, $request);

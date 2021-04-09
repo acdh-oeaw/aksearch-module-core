@@ -27,6 +27,8 @@
  */
 namespace AkSearch\Controller;
 
+use Laminas\View\Model\ViewModel;
+
 /**
  * AK: Extending Content Controller
  *     Adding possibility to view content based on a permission in permissions.ini
@@ -40,18 +42,19 @@ namespace AkSearch\Controller;
 class ContentController extends \VuFind\Controller\ContentController
 {
     /**
-     * Default action if none provided
+     * Get ViewModel for phtml base page
      * 
      * AK: Additional functionalities:
      *  - Added access restrictions via permissions.ini
      *  - Added possibility to pass variables to content page from config.ini
      *
-     * @return Laminas\View\Model\ViewModel
+     * @param string $page Page name/route (if applicable)
+     * @param string $path Full path to file with content (if applicable)
+     *
+     * @return ViewModel
      */
-    public function contentAction()
+    protected function getViewForPhtml(string $page, string $path): ViewModel
     {
-        $page = $this->params()->fromRoute('page');
-
         // AK: Get config.ini
         $mainConfs = $this->getConfig()->toArray();
         
@@ -63,31 +66,7 @@ class ContentController extends \VuFind\Controller\ContentController
             return $errorView;
         }
 
-        $themeInfo = $this->serviceLocator->get(\VuFindTheme\ThemeInfo::class);
-        $language = $this->serviceLocator->get(\Laminas\Mvc\I18n\Translator::class)
-            ->getLocale();
-        $defaultLanguage = $this->getConfig()->Site->language;
-
-        // Try to find a template using
-        // 1.) Current language suffix
-        // 2.) Default language suffix
-        // 3.) No language suffix
-        $currentTpl = "templates/content/{$page}_$language.phtml";
-        $defaultTpl = "templates/content/{$page}_$defaultLanguage.phtml";
-        if (null !== $themeInfo->findContainingTheme($currentTpl)) {
-            $page = "{$page}_$language";
-        } elseif (null !== $themeInfo->findContainingTheme($defaultTpl)) {
-            $page = "{$page}_$defaultLanguage";
-        }
-
-        if (empty($page) || 'content' === $page
-            || null === $themeInfo->findContainingTheme(
-                "templates/content/$page.phtml"
-            )
-        ) {
-            return $this->notFoundAction($this->getResponse());
-        }
-
+        // AK: Get view model
         $view = $this->createViewModel(['page' => $page]);
 
         // AK: Get variables for the current static content page
@@ -96,7 +75,7 @@ class ContentController extends \VuFind\Controller\ContentController
             // Set variables if we found some
             $view->setVariables($vars);
         }
-        
+
         return $view;
     }
 

@@ -777,11 +777,16 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             'lastname'          => (isset($xml->last_name))
                 ? (string) $xml->last_name
                 : null,
-            /*'group'             => (isset($xml->user_group['desc']))
-                ? (string) $xml->user_group['desc']
-                : null,*/
+            // AK: We translate the TranslatableString to it's description because:
+            //  - According to the VuFind documentation, a string is expected, see:
+            //    https://vufind.org/wiki/development:plugins:ils_drivers#getmyprofile
+            //  - We cache this value for and get it from there in the user group
+            //    permission provider (AkSearch\Role\PermissionProvider\UserGroup).
+            //    There we need a string for user group comparison.
+            // TODO: This is maybe something for the VuFind main code (or at least
+            //       something to mention in the documentation for getMyProfile).
             'group'             => isset($xml->user_group)
-                ? $this->getTranslatableString($xml->user_group)
+                ? $this->translate($this->getTranslatableString($xml->user_group))
                 : null,
             'group_code'        => (isset($xml->user_group))
                 ? (string) $xml->user_group

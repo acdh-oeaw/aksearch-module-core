@@ -70,6 +70,9 @@ trait PermissionTrait
             // If permission configs are set for a search value, check the permission
             // status.
             foreach ($permissionsToCheck as $permissionToCheck) {
+                //var_dump($permissionsToCheck);
+                //var_dump($value);
+                //var_dump($authService->isGranted($permissionToCheck));
                 if ($authService->isGranted($permissionToCheck)) {
                     // Return true if permission is granted.
                     return true;

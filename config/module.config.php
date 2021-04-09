@@ -76,6 +76,11 @@ $config = [
                     'almadatabase' => 'AkSearch\Auth\AlmaDatabase'
                 ]
             ],
+            'captcha' => [
+                'factories' => [
+                    'VuFind\Captcha\Image' => 'AkSearch\Captcha\ImageFactory'
+                ]
+            ],
             'db_row' => [
                 'factories' => [
                     'AkSearch\Db\Row\Loans' => 'VuFind\Db\Row\RowGatewayFactory'

@@ -94,7 +94,14 @@ class History extends \VuFind\Search\History
         {
             return [];
         }
-        return $this->config->Account->scheduled_search_frequencies
+
+        // AK: Convert to array with ->toArray() because we must return an array. If
+        // not, we would return an object which is not allowed as parameter of the
+        // constructor in VuFindConsole\Command\ScheduledSearch\NotifyCommand (see
+        // parameter $scheduleOptions). We would get an error when running the
+        // "scheduled search email alert" CLI script.
+        // TODO: Should also be changed in VuFind main code.
+        return $this->config->Account->scheduled_search_frequencies->toArray()
             ?? [0 => 'schedule_none', 1 => 'schedule_daily', 7 => 'schedule_weekly'];
     }
 }

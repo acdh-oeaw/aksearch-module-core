@@ -107,15 +107,19 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
     {
         $this->disableSessionWrites();  // avoid session write timing bug
 
-        $facet = $params->fromQuery('facetName');
-        $sort = $params->fromQuery('facetSort');
-        $operator = $params->fromQuery('facetOperator');
-        $backend = $params->fromQuery('source', DEFAULT_SEARCH_BACKEND);
+        // Allow both GET and POST variables:
+        // AK: Use other variable name "$parameters"
+        $parameters = $params->fromQuery() + $params->fromPost();
+
+        $facet = $parameters['facetName'] ?? null;
+        $sort = $parameters['facetSort'] ?? null;
+        $operator = $parameters['facetOperator'] ?? null;
+        $backend = $parameters['source'] ?? DEFAULT_SEARCH_BACKEND;
 
         // AK: Get information about the calling routes in the URL so that we can
         // take actions depending on in, e. g.: Take only certain actions if the call
         // comes from the "NewItem" route.
-        $route = $params->fromQuery('route');
+        $route = $parameters['route'] ?? null;
 
         // AK: Get AkSearch\Search\Solr\Results object
         $results = $this->resultsManager->get($backend);
@@ -134,9 +138,9 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
                 $this->newItemConfig, $this->siteConfig);
 
             // AK: These parameters are especially for the "new items" search
-            $range = $params->fromQuery('range');
-            $department = $params->fromQuery('department');
-            $filter = $params->fromQuery('filter');
+            $range = $parameters['range'] ?? null;
+            $department = $parameters['department'] ?? null;
+            $filter = $parameters['filter'] ?? null;
 
             // AK: Get hidden filters from the new items
             $hiddenFilters = $newItems->getHiddenFilters();
@@ -175,20 +179,29 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
         $paramsObj->addFacet($facet, null, $operator === 'OR');
         // AK: We use the query parameters from the request object that we changed
         // above instead of just the query params that are comming from JS.
-        //$paramsObj->initFromRequest(new Parameters($params->fromQuery()));
         $paramsObj->initFromRequest(new Parameters((array)$request->getQuery()));
 
         $facets = $results->getFullFieldFacets([$facet], false, -1, 'count');
         if (empty($facets[$facet]['data']['list'])) {
             $facets = [];
         } else {
+            // Set appropriate query suppression / extra field behavior:
+            $queryHelper = $results->getUrlQuery();
+            $queryHelper->setSuppressQuery(
+                (bool)($request['querySuppressed'] ?? false)
+            );
+            $extraFields = array_filter(explode(',', $request['extraFields'] ?? ''));
+            foreach ($extraFields as $field) {
+                if (isset($request[$field])) {
+                    $queryHelper->setDefaultParameter($field, $request[$field]);
+                }
+            }
+
             $facetList = $facets[$facet]['data']['list'];
             $this->facetHelper->sortFacetList($facetList, $sort);
-            $facets = $this->facetHelper->buildFacetArray(
-                $facet, $facetList, $results->getUrlQuery(), false
-            );
+            $facets = $this->facetHelper
+                ->buildFacetArray($facet, $facetList, $queryHelper, false);
         }
-
         return $this->formatResponse(compact('facets'));
     }
 }
