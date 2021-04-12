@@ -131,9 +131,9 @@ trait MarcAdvancedTrait
      *     are built from 689 fields which is a specific field used by
      *     german-speaking libraries. We also have field 982 which is unique for some
      *     austrian libraries.
-     *     TODO: Maybe we could use config to specify the fields that should be used
-     *     for keyword chains. That would make it more flexible for libraries that
-     *     are using other Marc fields.
+     *     TODO: Maybe we could use a config entry to specify the fields that should
+     *     be used for keyword chains. That would make it more flexible for libraries
+     *     that are using other Marc fields.
      * 
      * @param bool $extended AK: Has no functionality here. Only exists to be
      *                       compatible with the function "getAllSubjectHeadings" in
