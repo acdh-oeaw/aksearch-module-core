@@ -132,6 +132,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                     $holdingId = (string)$item->holding_data->holding_id;
                     $itemId = (string)$item->item_data->pid;
                     $barcode = (string)$item->item_data->barcode;
+                    $processType = (string)$item->item_data->process_type ?: null;
                     $requested = ((string)$item->item_data->requested == 'false')
                         ? false
                         : true;
@@ -139,12 +140,17 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                         ? $this->parseDate($date)
                         : null;
 
-                    // AK: Get the number of requests
+                    // AK: Get the number of requests, but only if the request is not
+                    // an internal request (e. g. like in the acquisition workflow).
+                    // TODO: It could be useful to create an option for custom
+                    // display text when certain process types do occur.
                     $noOfRequests = 0;
-                    if ($requested) {
+                    if ($requested && !in_array($processType,
+                        ['WORK_ORDER_DEPARTMENT', 'TECHNICAL', 'TRANSIT']))
+                    {
                         $requestPath = '/bibs/' . urlencode($id) . '/holdings/'
-                            . urlencode($holdingId) . '/items/'
-                            . urlencode($itemId) . '/requests';
+                        . urlencode($holdingId) . '/items/'
+                        . urlencode($itemId) . '/requests';
                         $requestData = $this->makeRequest($requestPath);
                         $noOfRequests = (int)$requestData
                             ->attributes()['total_record_count'] ?: 0;
