@@ -94,7 +94,7 @@ trait MarcAdvancedTrait
                     : null;
                 // Use only subject terms (designated by "s"), not e. g. person names
                 if ($subjectType689 == 's' || $subjectType689 == 'S') {
-                    $subfields689 = $subjectField689->getSubfields('[axvtyzbcg]',
+                    $subfields689 = $subjectField689->getSubfields('[axvtyzbcgh]',
                         true);
                     $subfieldData689 = [];
                     foreach($subfields689 as $subfield689) {
@@ -152,7 +152,7 @@ trait MarcAdvancedTrait
             $ind2 = $subjectField->getIndicator(2);
 
             if (is_numeric($ind1) && is_numeric($ind2)) {
-                $subfields = $subjectField->getSubfields('[axvtyzbcg]', true);
+                $subfields = $subjectField->getSubfields('[axvtyzbcgh]', true);
                 $subfieldData = [];
                 foreach($subfields as $subfield) {
                     $subfieldData[] = $subfield->getData();
