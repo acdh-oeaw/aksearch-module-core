@@ -71,7 +71,42 @@ class Parts extends \VuFind\RecordTab\AbstractBase {
         // Get child information and tweak it for better output in "parts" tab
         $childs = $this->getRecordDriver()->tryMethod('getChilds');
 
-        if ($childs) {
+        if ($childs) {            
+            // Check for duplicate entris with same record ID
+            // TODO: Is there a simpler way to remove duplicate array entries?
+            // Get all unique IDs
+            $uniqueIds = array_unique(array_column($childs, 'id'));
+            $allKeysToRemove = [];
+            // For each ID number, check if there are multiple entries in the childs
+            // array. If yes, remove entries and check for some data to decide which
+            // duplicate entry should be removed.
+            foreach ($uniqueIds as $uniqueId) {
+                $childsWithSameId = array_filter($childs, function($c)
+                    use ($uniqueId) { return $c['id'] == $uniqueId; });
+                // TODO: With PHP 7.4 this should be possible:
+                // $childsWithSameId = array_filter($childs, fn($c) => $c['id'] == $uniqueId);
+                if (count($childsWithSameId) > 1) {
+                    // Get array keys of all duplicates
+                    $allKeys = array_keys($childsWithSameId);
+                    $keyToKeep = null;
+                    // Check for certain data - if available, keep this child and
+                    // remove others
+                    $childsWithVolNo = array_filter($childsWithSameId, function ($c)
+                        { return $c['volNo'] != null; });
+                    if (count($childsWithVolNo) > 0) {
+                        $keyToKeep = array_key_first($childsWithVolNo);
+                    } else {
+                        $keyToKeep = array_key_first($childsWithSameId);
+                    }
+                    // Get array keys of entries that should be removed.
+                    $keysToRemove = array_filter($allKeys, function($k)
+                        use ($keyToKeep) { return $k != $keyToKeep; });
+                    $allKeysToRemove = array_merge($allKeysToRemove, $keysToRemove);
+                }
+            }
+            // Remove array entries based on array keys
+            $childs = array_diff_key($childs, array_flip($allKeysToRemove));         
+
             // Arrays for sorting
             $pubYears = array_map(
                 function($pubYear) {
@@ -140,6 +175,7 @@ class Parts extends \VuFind\RecordTab\AbstractBase {
 
         }
 
+        
         return (empty($result)) ? null : $result;
     }
 
