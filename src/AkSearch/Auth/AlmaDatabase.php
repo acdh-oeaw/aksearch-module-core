@@ -202,11 +202,6 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
             throw new AuthException('change_userdata_email_domain_blocked');
         }
 
-        // Make sure we have a unique email
-        if ($userTable->getByEmail($params['email'])) {
-            throw new AuthException('That email address is already used');
-        }
-
         // If we got this far, the data should be valid and we can get the user row
         // and change its data.
         $user = $userTable->getByCatalogId($patron['id']);
