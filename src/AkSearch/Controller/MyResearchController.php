@@ -226,7 +226,7 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
             // Pass name of authentication method to view
             $view->auth_method = $this->getAuthManager()->getAuthMethod();
 
-            // Use recaptacha when set in config
+            // Use captacha when set in config
             $view->useCaptcha = $this->captcha()->active('changeUserdata');
 
             // If form was submitted
