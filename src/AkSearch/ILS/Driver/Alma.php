@@ -1713,6 +1713,67 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
     }
 
     /**
+     * Get Pick Up Locations
+     *
+     * This is responsible get a list of valid library locations for holds / recall
+     * retrieval
+     * 
+     * AK: Filter the list of pickup locations displayed to the user in the drop down
+     * list of the "place hold" dialog. Only locations listed in the config
+     * "validPickupLocations" in the [Holds] section of Alma.ini will be returned. If
+     * the config is not set, all pickup locations will be returned.
+     *
+     * @param array $patron Patron information returned by the patronLogin method.
+     * 
+     * @return array An array of associative arrays with locationID and
+     * locationDisplay keys, filterd by the values from the config (if set).
+     */
+    public function getPickupLocations($patron)
+    {
+        // Variable for returning
+        $filteredPul = null;
+
+        // Get pickup locations from Alma
+        $pul = parent::getPickupLocations($patron);
+
+        // Get config "validPickupLocations" and check if it is set
+        $validPulS = $this->config['Holds']['validPickupLocations'] ?? null ?: null;
+        if ($validPulS) {
+            // Convert config "validPickupLocations" to array
+            $validPul = preg_split('/\s*,\s*/', $validPulS);
+
+            // Filter valid pickup locations
+            $filteredPul = array_filter($pul,
+                function($p) use ($validPul) {
+                    return in_array($p['locationID'], $validPul);
+                }
+            );
+        }
+
+        // Return result (resets the array keys with array_values)
+        return ($filteredPul) ? array_values($filteredPul) : $pul;
+    }
+
+    /**
+     * Get default pickup locations.
+     * 
+     * TODO: Add to VuFind main code.
+     *
+     * @param array $patron       Patron array returned by patronLogin method
+     * @param array $holdDetails  Hold information array similar to placeHold's input
+     * 
+     * @return string Default pick up location code for use when placing holds and
+     * other requests
+     */
+    public function getDefaultPickUpLocation($patron = false, $holdDetails = null) {
+        $defaultPul = $this->config['Holds']['defaultPickUpLocation'] ?? '';
+        if ($defaultPul === 'user-selected') {
+            $defaultPul = false;
+        }
+        return $defaultPul;
+    }
+
+    /**
      * Helper method to determine whether or not a certain method can be
      * called on this driver. Required method for any smart drivers.
      *
