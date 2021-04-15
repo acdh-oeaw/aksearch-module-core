@@ -915,22 +915,118 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
         // Get user object from Alma via API
         $xml = $this->makeRequest('/users/' . $patronId, ['view' => 'full']);
 
-        // Get e-mail object and set the address to the given user input
+        // Get e-mail object
         $emailObj = $this->getEmailFromAlmaXmlUserObject($xml);
         if ($emailObj != null) {
-            $emailObj->email_address = $email;
+            if (!empty($email)) {
+                // If an email address already existed, set it to the user input
+                $emailObj->email_address = $email;
+            } else {
+                // If an email address already existed but the user provided no
+                // input, remove it.
+                unset($emailObj[0][0]);
+            }
+        } else {
+            // Add new email address if it didn't exist before and if user input is
+            // not empty
+            if (!empty($email)) {
+                // Get config for creating new Alma users from Alma.ini
+                $newUserConfig = $this->config['NewUser'] ?? [];
+
+                // Add "contact_info" XML element if it doesn't exist
+                if (!$xml->contact_info) {
+                    $xml->addChild('contact_info');
+                }
+
+                // Add "emails" XML element if it doesn't exist
+                if (!$xml->contact_info->emails) {
+                    $xml->contact_info->addChild('emails');
+                }
+
+                // Add new "email" XML element
+                $newEmail = $xml->contact_info->emails->addChild('email');
+                $newEmail->addAttribute('preferred', 'true');
+                $newEmail->addAttribute('segment_type', 'Internal');
+                $newEmail->addChild('email_address', $email);
+                $newEmail->addChild('email_types')->addChild('email_type',
+                    $newUserConfig['emailType']);
+            }
         }
 
-        // Get non-mobile phone object and set the address to the given user input
+        // Get non-mobile phone object
         $phoneObj = $this->getPhoneFromAlmaXmlUserObject($xml);
         if ($phoneObj != null) {
-            $phoneObj->phone_number = $phone;
+            if (!empty($phone)) {
+                // If a phone number already existed, set it to the user input
+                $phoneObj->phone_number = $phone;
+            } else {
+                // If a phone number already existed but the user provided no input,
+                // remove it.
+                unset($phoneObj[0][0]);
+            }
+        } else {
+            // Add new phone number if it didn't exist before and if user input is
+            // not empty
+            if (!empty($phone)) {
+                var_dump($phone);
+                // Get config for creating new Alma users from Alma.ini
+                $newUserConfig = $this->config['NewUser'] ?? [];
+
+                // Add "contact_info" XML element if it doesn't exist
+                if (!$xml->contact_info) {
+                    $xml->addChild('contact_info');
+                }
+
+                // Add "phones" XML element if it doesn't exist
+                if (!$xml->contact_info->phones) {
+                    $xml->contact_info->addChild('phones');
+                }
+
+                // Add new "phone" XML element
+                $newMobilePhone = $xml->contact_info->phones->addChild('phone');
+                $newMobilePhone->addAttribute('preferred', 'false');
+                $newMobilePhone->addAttribute('preferred_sms', 'false');
+                $newMobilePhone->addAttribute('segment_type', 'Internal');
+                $newMobilePhone->addChild('phone_number', $phone);
+                $newMobilePhone->addChild('phone_types')->addChild('phone_type',
+                    $newUserConfig['phoneType']);
+            }
         }
 
-        // Get mobile phone object and set the address to the given user input
+        // Get mobile phone object
         $mobilePhoneObj = $this->getMobilePhoneFromAlmaXmlUserObject($xml);
         if ($mobilePhoneObj != null) {
-            $mobilePhoneObj->phone_number = $mobilePhone;
+            if (!empty($mobilePhone)) {
+                // If a mobile phone number already existed, set it to the user input
+                $mobilePhoneObj->phone_number = $mobilePhone;
+            } else {
+                // If a mobile phone number already existed but the user provided no
+                // input, remove it.
+                unset($mobilePhoneObj[0][0]);
+            }
+        } else {
+            // Add new mobile phone number if it didn't exist before and if user
+            // input is not empty
+            if (!empty($mobilePhone)) {
+                // Add "contact_info" XML element if it doesn't exist
+                if (!$xml->contact_info) {
+                    $xml->addChild('contact_info');
+                }
+
+                // Add "phones" XML element if it doesn't exist
+                if (!$xml->contact_info->phones) {
+                    $xml->contact_info->addChild('phones');
+                }
+
+                // Add new "phone" XML element
+                $newMobilePhone = $xml->contact_info->phones->addChild('phone');
+                $newMobilePhone->addAttribute('preferred', 'false');
+                $newMobilePhone->addAttribute('preferred_sms', 'false');
+                $newMobilePhone->addAttribute('segment_type', 'Internal');
+                $newMobilePhone->addChild('phone_number', $mobilePhone);
+                $newMobilePhone->addChild('phone_types')->addChild('phone_type',
+                    'mobile');
+            }
         }
 
         // Convert simple XML element to string
@@ -999,10 +1095,14 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                         'phone[@preferred="true"][phone_types/phone_type!="mobile"]'
                     );
 
-                // If no preferred default phone is found, get the first one
-                $phone = (!empty($prefPhone))
-                    ? $prefPhone[0]
-                    : $contact->phones[0]->phone;
+                // If no preferred non-mobile phone is found, get all other
+                // non-mobile phones
+                $phone = (!empty($prefPhone)) ? $prefPhone : $contact->phones
+                    ->xpath('phone[phone_types/phone_type!="mobile"]');
+
+                // Select the first non-mobile phone of all non-mobile phones (if any
+                // exists)
+                $phone = (!empty($phone)) ? $phone[0] : null;
             }
         }
         return $phone;
@@ -1027,7 +1127,7 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                         'phone[@preferred="true"][phone_types/phone_type="mobile"]'
                     );
 
-                // If no preffered mobile phone is set, get all other mobile phones
+                // If no preferred mobile phone is set, get all other mobile phones
                 $mobile = (!empty($prefMobile)) ? $prefMobile : $contact->phones
                     ->xpath('phone[phone_types/phone_type="mobile"]');
 
