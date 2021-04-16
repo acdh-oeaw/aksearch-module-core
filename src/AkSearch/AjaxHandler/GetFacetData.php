@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2020.
+ * Copyright (C) AK Bibliothek Wien 2021.
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -146,9 +146,9 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
             $hiddenFilters = $newItems->getHiddenFilters();
 
             // AK: Add "range" for new items search if it exists. New items page only
-            // works if there is a "range" parameter in the URL because the results page
-            // of the new items will only be displayed if the "range" parameter exists.
-            // See: \AkSearch\Controller\SearchController->newitemAction()
+            // works if there is a "range" parameter in the URL because the results
+            // page of the new items will only be displayed if the "range" parameter
+            // exists. See: \AkSearch\Controller\SearchController->newitemAction()
             if ($range) {
                 $results->getUrlQuery()->setDefaultParameter('range', $range);
                 $hiddenFilters[] = $newItems->getSolrFilter($range);
@@ -156,19 +156,22 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
 
             // AK: Add "department" from new items search if it exists
             if ($department) {
-                $results->getUrlQuery()->setDefaultParameter('department', $department);
+                $results->getUrlQuery()->setDefaultParameter('department',
+                    $department);
                 $request->getQuery()->set('department', $department);
             }
 
-            // AK: Add "hiddenFilters" for new items search if it exists. Set it also to
-            // the request object so that the facets itself will get filtered correctly.
-            // If we don't do that, the facet numbers won't be correct.
+            // AK: Add "hiddenFilters" for new items search if it exists. Set it also 
+            // to the request object so that the facets itself will get filtered
+            // correctly. If we don't do that, the facet numbers won't be correct.
             if ($hiddenFilters) {
-                $results->getUrlQuery()->setDefaultParameter('hiddenFilters', $hiddenFilters);
+                $results->getUrlQuery()->setDefaultParameter('hiddenFilters',
+                    $hiddenFilters);
                 $request->getQuery()->set('hiddenFilters', $hiddenFilters);
             }
 
-            // AK: Add facets filter from new items search form to query for results page
+            // AK: Add facets filter from new items search form to query for results
+            // page.
             if (!empty($filter)) {
                 $results->getUrlQuery()->setDefaultParameter('filter', $filter);
                 $request->getQuery()->set('filter', $filter);
@@ -177,9 +180,10 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
 
         $paramsObj = $results->getParams();
         $paramsObj->addFacet($facet, null, $operator === 'OR');
-        // AK: We use the query parameters from the request object that we changed
-        // above instead of just the query params that are comming from JS.
-        $paramsObj->initFromRequest(new Parameters((array)$request->getQuery()));
+        // AK: We also use the query parameters from the request object that we
+        // changed above instead of just the params that are comming from JS.
+        $paramsObj->initFromRequest(new Parameters((array)$request->getQuery()
+            + $parameters));
 
         $facets = $results->getFullFieldFacets([$facet], false, -1, 'count');
         if (empty($facets[$facet]['data']['list'])) {
@@ -188,12 +192,14 @@ class GetFacetData extends \VuFind\AjaxHandler\GetFacetData
             // Set appropriate query suppression / extra field behavior:
             $queryHelper = $results->getUrlQuery();
             $queryHelper->setSuppressQuery(
-                (bool)($request['querySuppressed'] ?? false)
+                (bool)($parameters['querySuppressed'] ?? false)
             );
-            $extraFields = array_filter(explode(',', $request['extraFields'] ?? ''));
+            $extraFields = array_filter(
+                explode(',', $parameters['extraFields'] ?? '')
+            );
             foreach ($extraFields as $field) {
-                if (isset($request[$field])) {
-                    $queryHelper->setDefaultParameter($field, $request[$field]);
+                if (isset($parameters[$field])) {
+                    $queryHelper->setDefaultParameter($field, $parameters[$field]);
                 }
             }
 
