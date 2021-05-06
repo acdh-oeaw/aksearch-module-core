@@ -1071,6 +1071,19 @@ trait MarcAdvancedTrait
     }
 
     /**
+     * Get AC number (Austrian Catalogue number) from field 009. This is very
+     * specific to Austrian libraries.
+     *
+     * @return string|null  The AC number or null
+     */
+    public function getAcNo() {
+        $acNo = ($this->getMarcRecord()->getField('009'))
+            ? $this->getMarcRecord()->getField('009')->getData()
+            : null;
+        return $acNo;
+    }
+
+    /**
      * Get all fields with a given tag and convert them to an easy-to-process array.
      * 
      * @param string $tag   A Marc21 tag, e. g. 245 for the title field.

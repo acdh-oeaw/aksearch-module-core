@@ -69,6 +69,7 @@ class SolrMarc extends SolrDefault
         hasItemProvenance as protected hasItemProvenanceFromXml;
         getItemProvenance as protected getItemProvenanceFromXml;
         getRecordBanner as protected getRecordBannerFromXml;
+        getAcNo as protected getAcNoFromXml;
     }
 
     /**
@@ -1260,5 +1261,20 @@ class SolrMarc extends SolrDefault
         $recordBanner = $this->getRecordBannerFromXml($recordBannerConfig);
         return $recordBanner;
     }
-    
+
+    /**
+     * Get AC number (Austrian Catalogue number) from Solr field acNo_txt. Fallback
+     * to MarcXML if there is no such field. This is very specific to Austrian
+     * libraries.
+     *
+     * @return string|null  The AC number or null
+     */
+    public function getAcNo() {
+        $acNo = $this->fields['acNo_txt'] ?? null;
+        if ($acNo == null || empty($acNo)) {
+            $acNo = $this->getAcNoFromXml();
+        }
+        return $acNo;
+    }
+
 }

@@ -337,6 +337,7 @@ class RecordDataFormatterFactory
         $spec->setLine('ISBN', 'getISBNs');
         $spec->setLine('ISSN', 'getISSNs');
         $spec->setLine('DOI', 'getCleanDOI');
+        $spec->setLine('ac_no', 'getAcNo');
         $spec->setLine('Related Items', 'getRelationshipNotes');
         $spec->setLine('Access', 'getAccessRestrictions');
         $spec->setLine('Finding Aid', 'getFindingAids');
