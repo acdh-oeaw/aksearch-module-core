@@ -639,10 +639,19 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             $allParams['email'];
         $almaUserObj->contact_info->emails->email->email_types->email_type =
             $newUserConfig['emailType'];
-        $almaUserObj->contact_info->phones->phone->phone_number =
-            $allParams['phone'];
-        $almaUserObj->contact_info->phones->phone->phone_types->phone_type =
-            $newUserConfig['phoneType'];
+        
+        if (empty(trim($allParams['phone']))) {
+            // AK: Remove "phones" node in user XML if no phone number was submitted.
+            // If an empty "phones" node would be sent to the Alma API it would throw
+            // back an error.
+            unset($almaUserObj->contact_info->phones);
+        } else {
+            $almaUserObj->contact_info->phones->phone->phone_number =
+                $allParams['phone'];
+            $almaUserObj->contact_info->phones->phone->phone_types->phone_type =
+                $newUserConfig['phoneType'];
+        }
+        
         $almaUserObj->user_identifiers->user_identifier->id_type =
             $newUserConfig['idType'];
         $almaUserObj->user_identifiers->user_identifier->value =
