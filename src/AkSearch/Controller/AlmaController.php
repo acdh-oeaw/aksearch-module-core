@@ -38,6 +38,9 @@ namespace AkSearch\Controller;
  */
 class AlmaController extends \VuFind\Controller\AlmaController
 {
+
+    use AkControllerTrait;
+
     /**
      * Action that is executed when the webhook page is called.
      *
@@ -124,6 +127,154 @@ class AlmaController extends \VuFind\Controller\AlmaController
         }
     }
 
+    /**
+     * Webhook actions related to a newly created, updated or deleted user in Alma.
+     * 
+     * AK: Use language code for getting the right translation of the welcome e-mail.
+     *
+     * @param mixed $requestBodyJson A JSON string decode with json_decode()
+     *
+     * @return NULL|\Laminas\Http\Response
+     */
+    protected function webhookUser($requestBodyJson)
+    {
+        // Initialize user variable that should hold the user table row
+        $user = null;
+
+        // AK: Initialize lang variable for preferred user language. This will be
+        // used for setting the language of the welcome e-mail. Default is 'en'.
+        $lang = 'en';
+
+        // Initialize response variable
+        $jsonResponse = null;
+
+        // Get method from webhook (e. g. "create" for "new user")
+        $method = $requestBodyJson->webhook_user->method ?? null;
+
+        // Get primary ID
+        $primaryId = $requestBodyJson->webhook_user->user->primary_id ?? null;
+
+        if ($method == 'CREATE' || $method == 'UPDATE') {
+            // Get username (could e. g. be the barcode)
+            $username = null;
+            $userIdentifiers
+                = $requestBodyJson->webhook_user->user->user_identifier ?? null;
+            $idTypeConfig = $this->configAlma->NewUser->idType ?? null;
+            foreach ($userIdentifiers as $userIdentifier) {
+                $idTypeHook = $userIdentifier->id_type->value ?? null;
+                if ($idTypeHook != null
+                    && $idTypeHook == $idTypeConfig
+                    && $username == null
+                ) {
+                    $username = $userIdentifier->value ?? null;
+                }
+            }
+
+            // Use primary ID as username as a fallback if no other
+            // username ID is available
+            $username = ($username == null) ? $primaryId : $username;
+
+            // Get user details from Alma Webhook message
+            $firstname = $requestBodyJson->webhook_user->user->first_name ?? null;
+            $lastname = $requestBodyJson->webhook_user->user->last_name ?? null;
+
+            $allEmails
+                = $requestBodyJson->webhook_user->user->contact_info->email ?? null;
+            $email = null;
+            foreach ($allEmails as $currentEmail) {
+                $preferred = $currentEmail->preferred ?? false;
+                if ($preferred && $email == null) {
+                    $email = $currentEmail->email_address ?? null;
+                }
+            }
+
+            if ($method == 'CREATE') {
+                $user = $this->userTable->getByUsername($username, true);
+                // AK: Get preferred user language. Default to 'en'.
+                $almaLang = $requestBodyJson->webhook_user->user->preferred_language
+                    ->value ?? 'en';
+                // AK: Check if the preferred user language is activated in the
+                // [Languages] section of config.ini. If not, default to 'en'.
+                $lang = ($this->isValidLanguage($almaLang, $this->serviceLocator))
+                    ? $almaLang : 'en';
+            }
+
+            if ($method == 'UPDATE') {
+                $user = $this->userTable->getByCatalogId($primaryId);
+            }
+
+            if ($user) {
+                $user->username = $username;
+                $user->firstname = $firstname;
+                $user->lastname = $lastname;
+                $user->updateEmail($email);
+                $user->cat_id = $primaryId;
+                $user->cat_username = $username;
+
+                try {
+                    $user->save();
+                    if ($method == 'CREATE') {
+                        // AK: Add language parameter
+                        $this->sendSetPasswordEmail($user, $this->config, $lang);
+                    }
+                    $jsonResponse = $this->createJsonResponse(
+                        'Successfully ' . strtolower($method) .
+                        'd user with primary ID \'' . $primaryId .
+                        '\' | username \'' . $username . '\'.', 200
+                    );
+                } catch (\Exception $ex) {
+                    $jsonResponse = $this->createJsonResponse(
+                        'Error when saving new user with primary ID \'' .
+                        $primaryId . '\' | username \'' . $username .
+                        '\' to VuFind database and sending the welcome email: ' .
+                        $ex->getMessage() . '. ',
+                        400
+                    );
+                }
+            } else {
+                $jsonResponse = $this->createJsonResponse(
+                    'User with primary ID \'' . $primaryId . '\' | username \'' .
+                    $username . '\' was not found in VuFind database and ' .
+                    'therefore could not be ' . strtolower($method) . 'd.',
+                    404
+                );
+            }
+        } elseif ($method == 'DELETE') {
+            $user = $this->userTable->getByCatalogId($primaryId);
+            if ($user) {
+                $rowsAffected = $user->delete();
+                if ($rowsAffected == 1) {
+                    $jsonResponse = $this->createJsonResponse(
+                        'Successfully deleted use with primary ID \'' . $primaryId .
+                        '\' in VuFind.', 200
+                    );
+                } else {
+                    $jsonResponse = $this->createJsonResponse(
+                        'Problem when deleting user with \'' . $primaryId .
+                        '\' in VuFind. It is expected that only 1 row of the ' .
+                        'VuFind user table is affected by the deletion. But ' .
+                        $rowsAffected . ' were affected. Please check the status ' .
+                        'of the user in the VuFind database.', 400
+                    );
+                }
+            } else {
+                $jsonResponse = $this->createJsonResponse(
+                    'User with primary ID \'' . $primaryId . '\' was not found in ' .
+                    'VuFind database and therefore could not be deleted.', 404
+                );
+            }
+        }
+
+        return $jsonResponse;
+    }
+
+    /**
+     * Webhook loan action.
+     *
+     * @param mixed $requestBodyJson A JSON string decode with json_decode()
+     * 
+     * @return \Laminas\Http\Response
+     */
     public function webhookLoan($requestBodyJson)
     {
         // Get event from webhook
@@ -256,20 +407,21 @@ class AlmaController extends \VuFind\Controller\AlmaController
         }
     }
 
-
     /**
      * Send the "set password email" to a new user that was created in Alma and sent
      * to VuFind via webhook.
      * 
-     * AK: Send HTML (mime) e-mail instead of "just text" e-mail
+     * AK: Send HTML (mime) e-mail instead of "just text" e-mail. Get e-mail text and
+     * subject in preferrd user language.
      *
      * @param \VuFind\Db\Row\User $user   A user row object from the VuFind
      *                                    user table.
      * @param \Laminas\Config\Config $config A config object of config.ini
+     * @param string $lang The language of the e-mail. Default is 'en'.
      *
      * @return void
      */
-    protected function sendSetPasswordEmail($user, $config)
+    protected function sendSetPasswordEmail($user, $config, $lang = 'en')
     {
         // If we can't find a user
         if (null == $user) {
@@ -287,14 +439,15 @@ class AlmaController extends \VuFind\Controller\AlmaController
                 $method = $this->getAuthManager()->getAuthMethod();
 
                 // AK: Get template for welcome e-mail when user is created via
-                //     Alma webhook.
+                // Alma webhook. Use $lang for getting the right translation.
                 $message = $renderer->render(
                     'Email/new-user-welcome-almawebhook.phtml', [
                     'firstname' => $user->firstname,
                     'lastname' => $user->lastname,
                     'username' => $user->username,
                     'url' => $this->getServerUrl('myresearch-verify') . '?hash=' .
-                        $user->verify_hash . '&auth_method=' . $method
+                        $user->verify_hash . '&auth_method=' . $method,
+                    'lang' => $lang
                     ]
                 );
                 
@@ -305,10 +458,11 @@ class AlmaController extends \VuFind\Controller\AlmaController
                         ?? $config->Site->email ?: $config->Site->email;
                 $replyTo = $almaConfig->Webhook->new_user_welcome_email_replyto;
                 
-                // AK: Send the mime e-mail
+                // AK: Send the mime e-mail. Translate subject with $lang.
                 $this->serviceLocator->get(\AkSearch\Mailer\Mailer::class)
                     ->sendMimeMail($user->email, $from,
-                    $this->translate('new_user_welcome_almawebhook_subject'),
+                    $this->translate('new_user_welcome_almawebhook_subject', [],
+                        null, $lang, $this->serviceLocator),
                     $message, $replyTo, null, $bcc, null);
             } catch (\VuFind\Exception\Mail $e) {
                 error_log(
@@ -326,7 +480,8 @@ class AlmaController extends \VuFind\Controller\AlmaController
      * @param string $msg Custom error message
      * @param int $httpStatusCode HTTP error code
      * @param \Exception $exception The whole PHP "Exception" object
-     * @return void
+     * 
+     * @return \Laminas\Http\Response
      */
     public function createErrorResponse($msg, $httpStatusCode, $exception = null)
     {
