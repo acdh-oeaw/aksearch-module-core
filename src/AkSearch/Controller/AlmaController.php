@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2021.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -27,6 +27,9 @@
  */
 namespace AkSearch\Controller;
 
+use Laminas\ServiceManager\ServiceLocatorInterface;
+use VuFind\I18n\Translator\TranslatorAwareInterface;
+
 /**
  * AK: Extending Alma controller, mainly for webhooks.
  *
@@ -36,10 +39,13 @@ namespace AkSearch\Controller;
  * @license  https://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://vufind.org/wiki/development:plugins:controllers Wiki
  */
-class AlmaController extends \VuFind\Controller\AlmaController
+class AlmaController
+    extends \VuFind\Controller\AlmaController
+    implements TranslatorAwareInterface
 {
 
-    use AkControllerTrait;
+    use \VuFind\I18n\Translator\TranslatorAwareTrait;
+    use \VuFind\I18n\Translator\LanguageInitializerTrait;
 
     /**
      * Action that is executed when the webhook page is called.
@@ -280,6 +286,7 @@ class AlmaController extends \VuFind\Controller\AlmaController
         // Get event from webhook
         $event = $requestBodyJson->event->value ?? null;
 
+        // Get ILS user ID from webhook
         $ilsUserId = $requestBodyJson->item_loan->user_id;
 
         // Get the MySQL user table
@@ -414,14 +421,14 @@ class AlmaController extends \VuFind\Controller\AlmaController
      * AK: Send HTML (mime) e-mail instead of "just text" e-mail. Get e-mail text and
      * subject in preferrd user language.
      *
-     * @param \VuFind\Db\Row\User $user   A user row object from the VuFind
-     *                                    user table.
+     * @param \VuFind\Db\Row\User $user   A user row object from the VuFind user
+     * table.
      * @param \Laminas\Config\Config $config A config object of config.ini
-     * @param string $lang The language of the e-mail. Default is 'en'.
+     * @param string $language The language of the e-mail. Default is 'en'.
      *
      * @return void
      */
-    protected function sendSetPasswordEmail($user, $config, $lang = 'en')
+    protected function sendSetPasswordEmail($user, $config, $language = 'en')
     {
         // If we can't find a user
         if (null == $user) {
@@ -438,16 +445,19 @@ class AlmaController extends \VuFind\Controller\AlmaController
                 $renderer = $this->getViewRenderer();
                 $method = $this->getAuthManager()->getAuthMethod();
 
+                // AK: Set language for translator
+                $this->translator->setLocale($language);
+                $this->addLanguageToTranslator($this->translator, $language);
+
                 // AK: Get template for welcome e-mail when user is created via
-                // Alma webhook. Use $lang for getting the right translation.
+                // Alma webhook.
                 $message = $renderer->render(
                     'Email/new-user-welcome-almawebhook.phtml', [
                     'firstname' => $user->firstname,
                     'lastname' => $user->lastname,
                     'username' => $user->username,
                     'url' => $this->getServerUrl('myresearch-verify') . '?hash=' .
-                        $user->verify_hash . '&auth_method=' . $method,
-                    'lang' => $lang
+                        $user->verify_hash . '&auth_method=' . $method
                     ]
                 );
                 
@@ -458,11 +468,10 @@ class AlmaController extends \VuFind\Controller\AlmaController
                         ?? $config->Site->email ?: $config->Site->email;
                 $replyTo = $almaConfig->Webhook->new_user_welcome_email_replyto;
                 
-                // AK: Send the mime e-mail. Translate subject with $lang.
+                // AK: Send the mime e-mail
                 $this->serviceLocator->get(\AkSearch\Mailer\Mailer::class)
                     ->sendMimeMail($user->email, $from,
-                    $this->translate('new_user_welcome_almawebhook_subject', [],
-                        null, $lang, $this->serviceLocator),
+                    $this->translate('new_user_welcome_almawebhook_subject'),
                     $message, $replyTo, null, $bcc, null);
             } catch (\VuFind\Exception\Mail $e) {
                 error_log(
@@ -475,13 +484,28 @@ class AlmaController extends \VuFind\Controller\AlmaController
     }
 
     /**
+     * Check if the language code specified in $lang is one of the active languages
+     * in the [Languages] section of the config.ini file.
+     *
+     * @param string $lang A language code, e. g. 'en' or 'de'
+     * @param ServiceLocatorInterface $sm The service locator
+     * 
+     * @return boolean true if the language code is valid, false otherwise
+     */
+    public function isValidLanguage($lang) {
+        $config = $this->serviceLocator->get(\VuFind\Config\PluginManager::class)
+            ->get('config')->toArray();
+        $langConfig = $config['Languages'] ?? [];
+        return key_exists($lang, $langConfig);
+    }
+
+    /**
      * Convenience method for creating an error response
      *
      * @param string $msg Custom error message
      * @param int $httpStatusCode HTTP error code
      * @param \Exception $exception The whole PHP "Exception" object
-     * 
-     * @return \Laminas\Http\Response
+     * @return void
      */
     public function createErrorResponse($msg, $httpStatusCode, $exception = null)
     {
