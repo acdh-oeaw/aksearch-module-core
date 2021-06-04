@@ -360,6 +360,65 @@ class MyResearchController extends \VuFind\Controller\MyResearchController
     }
 
     /**
+     * Helper function for recoverAction
+     * 
+     * AK: Use custom "from" address.
+     *
+     * @param \VuFind\Db\Row\User $user   User object we're recovering
+     * @param \VuFind\Config      $config Configuration object
+     *
+     * @return void (sends email or adds error message)
+     */
+    protected function sendRecoveryEmail($user, $config)
+    {
+        // If we can't find a user
+        if (null == $user) {
+            $this->flashMessenger()->addMessage('recovery_user_not_found', 'error');
+        } else {
+            // Make sure we've waited long enough
+            $hashtime = $this->getHashAge($user->verify_hash);
+            $recoveryInterval = $config->Authentication->recover_interval ?? 60;
+            if (time() - $hashtime < $recoveryInterval) {
+                $this->flashMessenger()->addMessage('recovery_too_soon', 'error');
+            } else {
+                // Attempt to send the email
+                try {
+                    // Create a fresh hash
+                    $user->updateHash();
+                    $config = $this->getConfig();
+                    $renderer = $this->getViewRenderer();
+                    $method = $this->getAuthManager()->getAuthMethod();
+                    // Custom template for emails (text-only)
+                    $message = $renderer->render(
+                        'Email/recover-password.phtml',
+                        [
+                            'library' => $config->Site->title,
+                            'url' => $this->getServerUrl('myresearch-verify')
+                                . '?hash='
+                                . $user->verify_hash . '&auth_method=' . $method
+                        ]
+                    );
+
+                    // AK: Get custom "from" address
+                    $from = $config->Authentication->recover_password_email_from
+                        ?: $config->Site->email ?? $config->Site->email;
+
+                    $this->serviceLocator->get(\VuFind\Mailer\Mailer::class)->send(
+                        $user->email,
+                        $from, // AK: Use custom "from" address
+                        $this->translate('recovery_email_subject'),
+                        $message
+                    );
+                    $this->flashMessenger()
+                        ->addMessage('recovery_email_sent', 'success');
+                } catch (MailException $e) {
+                    $this->flashMessenger()->addMessage($e->getMessage(), 'error');
+                }
+            }
+        }
+    }
+
+    /**
      * AK: Removes attachments with errors. For the remaining attachments: Checks if
      *     they have an accepted mime type and if they are of an accepted file size.
      *
