@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2021.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -132,7 +132,10 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
 
     /**
      * Attempt to authenticate the current user. Throws exception if login fails.
-     * AK: Check if user exists in VuFind database AND in Alma
+     * 
+     * AK: Check if user exists in VuFind database AND in Alma. Check for username in
+     * a case sensitive way (default is case insensitivity because MySQL "SELECT" is
+     * case insensitive).
      *
      * @param Request $request Request object containing account credentials.
      *
@@ -154,9 +157,13 @@ class AlmaDatabase extends \VuFind\Auth\AlmaDatabase
             throw new AuthException('authentication_error_invalid');
         }
 
+        // AK: Check for case sensitivity in username
+        if ($user->username != $this->username) {
+            throw new AuthException('authentication_error_username_case');
+        }
+
         // Verify email address:
         $this->checkEmailVerified($user);
-
 
         // AK: Check if the user exists in Alma by calling the getMyProfile function
         //     of the Alma ILS driver.
