@@ -14,6 +14,7 @@ $config = [
             'AkSearch\Controller\AuthorController' => 'VuFind\Controller\AbstractBaseFactory',
             'AkSearch\Controller\BrowseController' => 'VuFind\Controller\AbstractBaseWithConfigFactory',
             'AkSearch\Controller\ContentController' => 'VuFind\Controller\AbstractBaseFactory',
+            'AkSearch\Controller\EmailAlertController' => 'VuFind\Controller\AbstractBaseFactory',
             'AkSearch\Controller\InstallController' => 'VuFind\Controller\AbstractBaseFactory',
             'AkSearch\Controller\MyResearchController' => 'VuFind\Controller\AbstractBaseFactory',
             'AkSearch\Controller\SearchController' => 'VuFind\Controller\AbstractBaseFactory'
@@ -23,6 +24,8 @@ $config = [
             'author' => 'AkSearch\Controller\AuthorController',
             'Content' => 'AkSearch\Controller\ContentController',
             'content' => 'AkSearch\Controller\ContentController',
+            'EmailAlert' => 'AkSearch\Controller\EmailAlertController',
+            'emailalert' => 'AkSearch\Controller\EmailAlertController',
             'VuFind\Controller\AlmaController' => 'AkSearch\Controller\AlmaController',
             'VuFind\Controller\BrowseController' => 'AkSearch\Controller\BrowseController',
             'VuFind\Controller\InstallController' => 'AkSearch\Controller\InstallController',
@@ -57,15 +60,23 @@ $config = [
         'plugin_managers' => [
             'ajaxhandler' => [
                 'factories' => [
-                    'AkSearch\AjaxHandler\GetSlideFacetTemplate' =>
-                        'AkSearch\AjaxHandler\GetSlideFacetTemplateFactory',
+                    'AkSearch\AjaxHandler\GetEmailAlertData' =>
+                        'AkSearch\AjaxHandler\GetEmailAlertDataFactory',
+                    'AkSearch\AjaxHandler\GetEmailAlertPopupTemplate' =>
+                        'AkSearch\AjaxHandler\GetEmailAlertPopupTemplateFactory',
                     'AkSearch\AjaxHandler\GetFacetData' =>
-                        'AkSearch\AjaxHandler\GetFacetDataFactory'
+                        'AkSearch\AjaxHandler\GetFacetDataFactory',
+                    'AkSearch\AjaxHandler\GetSlideFacetTemplate' =>
+                        'AkSearch\AjaxHandler\GetSlideFacetTemplateFactory'
+                    
                 ],
                 'aliases' => [
+                    'getEmailAlertData' => 'AkSearch\AjaxHandler\GetEmailAlertData',
+                    'getEmailAlertPopupTemplate' => 
+                        'AkSearch\AjaxHandler\GetEmailAlertPopupTemplate',
+                    'getFacetData' => 'AkSearch\AjaxHandler\GetFacetData',
                     'getSlideFacetTemplate' =>
-                        'AkSearch\AjaxHandler\GetSlideFacetTemplate',
-                    'getFacetData' => 'AkSearch\AjaxHandler\GetFacetData'
+                        'AkSearch\AjaxHandler\GetSlideFacetTemplate'
                 ]
             ],
             'auth' => [
@@ -83,18 +94,22 @@ $config = [
             ],
             'db_row' => [
                 'factories' => [
-                    'AkSearch\Db\Row\Loans' => 'VuFind\Db\Row\RowGatewayFactory'
+                    'AkSearch\Db\Row\Loans' => 'VuFind\Db\Row\RowGatewayFactory',
+                    'AkSearch\Db\Row\Search' => 'VuFind\Db\Row\RowGatewayFactory'
                 ],
                 'aliases' => [
-                    'loans' => 'AkSearch\Db\Row\Loans'
+                    'loans' => 'AkSearch\Db\Row\Loans',
+                    'VuFind\Db\Row\Search' => 'AkSearch\Db\Row\Search'
                 ]
             ],
             'db_table' => [
                 'factories' => [
-                    'AkSearch\Db\Table\Loans' => 'VuFind\Db\Table\GatewayFactory'
+                    'AkSearch\Db\Table\Loans' => 'VuFind\Db\Table\GatewayFactory',
+                    'AkSearch\Db\Table\Search' => 'VuFind\Db\Table\GatewayFactory'
                 ],
                 'aliases' => [
-                    'loans' => 'AkSearch\Db\Table\Loans'
+                    'loans' => 'AkSearch\Db\Table\Loans',
+                    'VuFind\Db\Table\Search' => 'AkSearch\Db\Table\Search'
                 ]
             ],
             'ils_driver' => [
@@ -183,7 +198,9 @@ $config = [
 ];
 
 $staticRoutes = [
-    'Install/FixLoanHistoryTable', 'MyResearch/ChangeUserdata'
+    'Install/FixEmailAlertInUserTable', 'Install/FixLoanHistoryTable',
+    'MyResearch/ChangeUserdata', 'EmailAlert/Processor',
+    'EmailAlert/CancelPopup', 'EmailAlert/Subscribe'
 ];
 
 $routeGenerator = new \VuFind\Route\RouteGenerator();
