@@ -159,6 +159,14 @@ $config = [
                     'VuFind\Search\Solr\FacetCache' => 'AkSearch\Search\Solr\FacetCache'
                 ]
             ],
+            'search_options' => [
+                'factories' => [
+                    'AkSearch\Search\Solr\Options' => 'VuFind\Search\OptionsFactory'
+                ],
+                'aliases' => [
+                    'VuFind\Search\Solr\Options' => 'AkSearch\Search\Solr\Options'
+                ]
+            ],
             'search_results' => [
                 'factories' => [
                     'AkSearch\Search\Solr\Results' => 'AkSearch\Search\Solr\ResultsFactory'

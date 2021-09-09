@@ -59,7 +59,7 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
     protected $permissionsConfig;
 
     /**
-     * AK: Constructor
+     * AK: Constructor - getting authorization service and config
      *
      * @param OptionsManager     $optionsManager    Search options plugin manager
      * @param array              $config            Configuration for search box
@@ -76,7 +76,8 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
         $alphabrowseConfig = [],
         ContainerInterface $container
     ) {
-        parent::__construct($optionsManager, $config, $placeholders, $alphabrowseConfig);
+        parent::__construct($optionsManager, $config, $placeholders,
+            $alphabrowseConfig);
 
         // AK: Creating authorization service for checking permissions from
         //     permissions.ini
@@ -93,21 +94,57 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
     }
 
     /**
-     * Support method for getHandlers() -- load basic settings.
-     * AK: Checking for permissions for using the search handler.
+     * Get an array of information on search handlers for use in generating a
+     * drop-down or hidden field. Returns an array of arrays with 'value', 'label',
+     * 'indent' and 'selected' keys.
+     * 
+     * AK: Get handlers for active search tab if there is one
      *
      * @param string $activeSearchClass Active search class ID
      * @param string $activeHandler     Active search handler
+     * @param array  $activeSearchTab   Active search tab or null
      *
      * @return array
      */
-    protected function getBasicHandlers($activeSearchClass, $activeHandler)
+    public function getHandlers($activeSearchClass, $activeHandler,
+        $activeSearchTab = null)
+    {
+        return $this->combinedHandlersActive()
+            ? $this->getCombinedHandlers($activeSearchClass, $activeHandler,
+                $activeSearchTab)
+            : $this->getBasicHandlers($activeSearchClass, $activeHandler,
+                $activeSearchTab);
+    }
+
+    /**
+     * Support method for getHandlers() -- load basic settings.
+     * 
+     * AK: Checking for permissions for using the search handler. Getting custom
+     * handlers for active search tab.
+     *
+     * @param string $activeSearchClass Active search class ID
+     * @param string $activeHandler     Active search handler
+     * @param array  $activeSearchTab   Active search tab or null
+     *
+     * @return array
+     */
+    protected function getBasicHandlers($activeSearchClass, $activeHandler,
+        $activeSearchTab = null)
     {
         $handlers = [];
         $options = $this->optionsManager->get($activeSearchClass);
-        foreach ($options->getBasicHandlers() as $searchVal => $searchDesc) {
+
+        // AK: Get handlers for an active search tab if we have one
+        $activeSearchTabHandlers = $this->getBasicSearchTabHandlers($options,
+            $activeSearchTab);
+
+        // AK: User handlers for active search tab if we have one
+        $basic = $activeSearchTabHandlers ?? $options->getBasicHandlers();
+
+        foreach ($basic as $searchVal => $searchDesc) {
             // AK: Check permissions
-            if ($this->getPermission($this->authService, $this->permissionsConfig, $searchVal)) {
+            if ($this->getPermission($this->authService, $this->permissionsConfig,
+                $searchVal)) {
                 $handlers[] = [
                     'value' => $searchVal, 'label' => $searchDesc, 'indent' => false,
                     'selected' => ($activeHandler == $searchVal)
@@ -119,14 +156,18 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
 
     /**
      * Support method for getHandlers() -- load combined settings.
-     * AK: Checking for permissions for using the search handler.
+     * 
+     * AK: Checking for permissions for using the search handler. Getting custom
+     * handlers for active search tab.
      *
      * @param string $activeSearchClass Active search class ID
      * @param string $activeHandler     Active search handler
+     * @param array  $activeSearchTab   Active search tab or null
      *
      * @return array
      */
-    protected function getCombinedHandlers($activeSearchClass, $activeHandler)
+    protected function getCombinedHandlers($activeSearchClass, $activeHandler,
+        $activeSearchTab = null)
     {
         // Build settings:
         $handlers = [];
@@ -142,8 +183,14 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
 
             if ($type == 'VuFind') {
                 $options = $this->optionsManager->get($target);
+
+                // AK: Get handlers for an active search tab if we have one
+                $activeSearchTabHandlers = $this->getBasicSearchTabHandlers($options,
+                    $activeSearchTab);
+
                 $j = 0;
-                $basic = $options->getBasicHandlers();
+                // AK: Use handlers for active search tab if we have one
+                $basic = $activeSearchTabHandlers ?? $options->getBasicHandlers();
                 if (empty($basic)) {
                     $basic = ['' => ''];
                 }
@@ -160,12 +207,13 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
                     }
 
                     // AK: Check permissions
-                    if ($this->getPermission($this->authService, $this->permissionsConfig, $searchVal)) {
+                    if ($this->getPermission($this->authService,
+                        $this->permissionsConfig, $searchVal)) {
                         
-                        // Depending on whether or not the current section has a label,
-                        // we'll either want to override the first label and indent
-                        // subsequent ones, or else use all default labels without
-                        // any indentation.
+                        // Depending on whether or not the current section has a 
+                        // label, we'll either want to override the first label and
+                        // indent subsequent ones, or else use all default labels
+                        // without any indentation.
                         if (empty($label)) {
                             $finalLabel = $searchDesc;
                             $indent = false;
@@ -194,7 +242,8 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
                 }
             } elseif ($type == 'External') {
                 // AK: Check permissions using external search target
-                if ($this->getPermission($this->authService, $this->permissionsConfig, $target)) {
+                if ($this->getPermission($this->authService,
+                    $this->permissionsConfig, $target)) {
                     $handlers[] = [
                         'value' => $type . ':' . $target, 'label' => $label,
                         'indent' => false, 'selected' => false,
@@ -217,7 +266,35 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
         if (!$selectedFound && $backupSelectedIndex !== false) {
             $handlers[$backupSelectedIndex]['selected'] = true;
         }
+
         return $handlers;
+    }
+
+    /**
+     * AK: Get handlers for an active search tab if we have one and if the options of
+     * the given search backend supports it.
+     *
+     * @param mixed $options         Option object from one of the
+     *                               \VuFind\Search\...\Options classes
+     * @param array $activeSearchTab Active search tab or null
+     * 
+     * @return array|null             Handlers of active search tab or null
+     */
+    protected function getBasicSearchTabHandlers($options, $activeSearchTab = null) {
+        // Default: empty array
+        $searchTabHandlers = [];
+
+        // Check if the search backend has the needed method
+        if (method_exists($options, 'getBasicSearchTabHandlers')) {
+            // Get search tab handlers
+            $searchTabHandlers = $options->getBasicSearchTabHandlers();
+        }
+
+        // Get ID of current search tab if we have one
+        $activeSearchTabId = $activeSearchTab['id'].'_Basic_Searches' ?? null;
+
+        // Return handlers of active search tab or null
+        return $searchTabHandlers[$activeSearchTabId] ?? null;
     }
 
 }
