@@ -5,7 +5,7 @@ namespace AkSearch\Module\Configuration;
 // Show PHP errors:
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
-error_reporting(- 1);
+error_reporting(-1);
 
 $config = [
     'controllers' => [
@@ -79,6 +79,14 @@ $config = [
             'captcha' => [
                 'factories' => [
                     'VuFind\Captcha\Image' => 'AkSearch\Captcha\ImageFactory'
+                ]
+            ],
+            'contentblock' => [
+                'factories' => [
+                    'AkSearch\ContentBlock\FacetList' => 'VuFind\ContentBlock\FacetListFactory'
+                ],
+                'aliases' => [
+                    'facetlist' => 'AkSearch\ContentBlock\FacetList'
                 ]
             ],
             'db_row' => [

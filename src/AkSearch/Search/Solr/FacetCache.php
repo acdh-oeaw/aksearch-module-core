@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2020.
+ * Copyright (C) AK Bibliothek Wien 2021.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -92,13 +92,15 @@ class FacetCache extends \VuFind\Search\Solr\FacetCache
      * Perform the actual facet lookup.
      * AK: Using permissions to show or hide facets. Configs are done in facets.ini
      *     and in permissions.ini. Will be used for home page facets and advanced
-     *     search form facets.
+     *     search form facets. Pass active search tab (if there is one) to display
+     *     facets for this special tab.
      *
      * @param string $initMethod Name of params method to use to request facets
+     * @param array|null $activeSearchTab Active search tab if there is one or null
      *
      * @return array
      */
-    protected function getFacetResults($initMethod)
+    protected function getFacetResults($initMethod, $activeSearchTab = null)
     {
         // Check if we have facet results cached, and build them if we don't.
         $cache = $this->cacheManager->getCache('object', $this->getCacheNamespace());
@@ -111,7 +113,7 @@ class FacetCache extends \VuFind\Search\Solr\FacetCache
 
         // Note that we need to initialize the parameters BEFORE generating the
         // cache key to ensure that the key is based on the proper settings.
-        $params->$initMethod();
+        $params->$initMethod($activeSearchTab);
         $cacheKey = $this->getCacheKey();
         if (!($list = $cache->getItem($cacheKey))) {
             // Avoid a backend request if there are no facets configured by the given
@@ -153,6 +155,28 @@ class FacetCache extends \VuFind\Search\Solr\FacetCache
 
         // AK: Return the list modified by permission settings
         return $list;
+    }
+
+    /**
+     * Return facet information. This data may come from the cache.
+     * 
+     * AK: Pass information about active search tab (if any) to get custom facets for
+     * that tab.
+     *
+     * @param string $context Context of list to retrieve ('Advanced' or 'HomePage')
+     * @param array|null $activeSearchTab Active search tab if there is one or null
+     *
+     * @return array
+     */
+    public function getList($context = 'Advanced', $activeSearchTab = null)
+    {
+        if (!in_array($context, ['Advanced', 'HomePage'])) {
+            throw new \Exception('Invalid context: ' . $context);
+        }
+        // For now, all contexts are handled the same way.
+        // AK: Pass information about active search tab (if any)
+        return $this->getFacetResults('init' . $context . 'Facets',
+            $activeSearchTab);
     }
 
     
