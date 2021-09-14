@@ -291,7 +291,9 @@ class SearchBox extends \VuFind\View\Helper\Root\SearchBox
         }
 
         // Get ID of current search tab if we have one
-        $activeSearchTabId = $activeSearchTab['id'].'_Basic_Searches' ?? null;
+        $activeSearchTabId = ($activeSearchTab && isset($activeSearchTab['id']))
+            ? ($activeSearchTab['id'].'_Basic_Searches' ?? null)
+            : null;
 
         // Return handlers of active search tab or null
         return $searchTabHandlers[$activeSearchTabId] ?? null;
