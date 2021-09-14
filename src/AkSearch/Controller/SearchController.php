@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2020.
+ * Copyright (C) AK Bibliothek Wien 2021.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -187,6 +187,71 @@ class SearchController extends \VuFind\Controller\SearchController
             : null;
 
         // Return the view with the record banner config
+        return $view;
+    }
+
+    /**
+     * Handle an advanced search
+     *
+     * @return mixed
+     */
+    public function advancedAction()
+    {
+        // AK: Info: Don't call parent::advancedAction() because this would call
+        // VuFind\Controller\AbstractSolrSearch->advancedAction() which also has a
+        // call to "parent::advancedAction();" (which would call VuFind\Controller\
+        // AbstractSearch->advancedAction()). That means that the parent methods
+        // would be called twice which would give us a wrong "$facets" variable in
+        // the end. That is why we call the grandparent method by using:
+        // \VuFind\Controller\AbstractSearch::advancedAction()
+        // Another solution could be to just copy the code from the grandparent
+        // method.
+        // Standard setup from base class:
+        // $view = parent::advancedAction();
+        $view = \VuFind\Controller\AbstractSearch::advancedAction();
+
+        // AK: Get active search tab and pass it to getList. We use the "SearchTabs"
+        // view helper for this.
+        $viewHelperManager = $this->serviceLocator->get('ViewHelperManager');
+        $searchTabs = $viewHelperManager->get('searchTabs');
+        $hiddenFilters = $searchTabs->getHiddenFilters($this->searchClassId, true,
+            false);
+        $tabConfig = $searchTabs->getTabConfig($this->searchClassId, null,
+            null, 'advanced', $hiddenFilters);
+        $activeSearchTab = $tabConfig['selected'] ?? null;
+
+        // Set up facet information:
+        $facets = $this->serviceLocator
+            ->get(\VuFind\Search\FacetCache\PluginManager::class)
+            ->get($this->searchClassId)
+            // AK: Pass active search tab
+            ->getList('Advanced', $activeSearchTab);
+        $view->hierarchicalFacets
+            = $this->getHierarchicalFacets($view->options->getFacetsIni());
+        $view->hierarchicalFacetsSortOptions
+            = $this->getAdvancedHierarchicalFacetsSortOptions(
+                $view->options->getFacetsIni()
+            );
+        $view->facetList = $this->processAdvancedFacets(
+            $facets,
+            $view->saved,
+            $view->hierarchicalFacets,
+            $view->hierarchicalFacetsSortOptions
+        );
+        $specialFacets = $this->parseSpecialFacetsSetting(
+            $view->options->getSpecialAdvancedFacets()
+        );
+        if (isset($specialFacets['illustrated'])) {
+            $view->illustratedLimit
+                = $this->getIllustrationSettings($view->saved);
+        }
+        if (isset($specialFacets['checkboxes'])) {
+            $view->checkboxFacets = $this->processAdvancedCheckboxes(
+                $specialFacets['checkboxes'], $view->saved
+            );
+        }
+        $view->ranges = $this->getAllRangeSettings($specialFacets, $view->saved);
+
         return $view;
     }
 }

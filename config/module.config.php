@@ -5,7 +5,7 @@ namespace AkSearch\Module\Configuration;
 // Show PHP errors:
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
-error_reporting(- 1);
+error_reporting(-1);
 
 $config = [
     'controllers' => [
@@ -92,6 +92,14 @@ $config = [
                     'VuFind\Captcha\Image' => 'AkSearch\Captcha\ImageFactory'
                 ]
             ],
+            'contentblock' => [
+                'factories' => [
+                    'AkSearch\ContentBlock\FacetList' => 'VuFind\ContentBlock\FacetListFactory'
+                ],
+                'aliases' => [
+                    'facetlist' => 'AkSearch\ContentBlock\FacetList'
+                ]
+            ],
             'db_row' => [
                 'factories' => [
                     'AkSearch\Db\Row\Loans' => 'VuFind\Db\Row\RowGatewayFactory',
@@ -122,7 +130,7 @@ $config = [
             ],
             'recommend' => [
                 'factories' => [
-                    'AkSearch\Recommend\SideFacets' => 'VuFind\Recommend\SideFacetsFactory'
+                    'AkSearch\Recommend\SideFacets' => 'AkSearch\Recommend\SideFacetsFactory'
                 ],
                 'aliases' => [
                     'sidefacets' => 'AkSearch\Recommend\SideFacets'
@@ -172,6 +180,14 @@ $config = [
                 ],
                 'aliases' => [
                     'VuFind\Search\Solr\FacetCache' => 'AkSearch\Search\Solr\FacetCache'
+                ]
+            ],
+            'search_options' => [
+                'factories' => [
+                    'AkSearch\Search\Solr\Options' => 'VuFind\Search\OptionsFactory'
+                ],
+                'aliases' => [
+                    'VuFind\Search\Solr\Options' => 'AkSearch\Search\Solr\Options'
                 ]
             ],
             'search_results' => [

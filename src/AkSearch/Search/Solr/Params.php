@@ -153,18 +153,34 @@ class Params extends \VuFind\Search\Solr\Params {
      * 
      * AK: Initialize facet mincount
      *
-     * @param string $facetList     Config section containing fields to activate
-     * @param string $facetSettings Config section containing related settings
-     * @param string $cfgFile       Name of configuration to load (null to load
+     * @param string $facetList      Config section containing fields to activate
+     * @param string $facetSettings  Config section containing related settings
+     * @param string $cfgFile        Name of configuration to load (null to load
      * default facets configuration).
+     * @param array $activeSearchTab Information about active search tab or null
      *
      * @return bool                 True if facets set, false if no settings found
      */
-    protected function initFacetList($facetList, $facetSettings, $cfgFile = null)
+    protected function initFacetList($facetList, $facetSettings, $cfgFile = null,
+        $activeSearchTab = null)
     {
         $config = $this->configLoader
             ->get($cfgFile ?? $this->getOptions()->getFacetsIni());
 
+        // AK: Get id for active search tab (if any) and create the section name
+        // from it for that we look in facets.ini
+        $suffix = ($facetList == 'Advanced') ? '_Advanced' : '_HomePage';
+        $sectionNameToUse = isset($activeSearchTab['id'])
+            ? $activeSearchTab['id'] . $suffix
+            : null;
+
+        // AK: Check if the active search tab (if any) has a corresponding section
+        // name for facets in facets.ini. If not, use the given $facetList value.
+        $facetIniSections = array_keys($config->toArray());
+        $facetList = (in_array($sectionNameToUse, $facetIniSections))
+            ? $sectionNameToUse
+            : $facetList;
+        
         // AK: Init mincount settings
         $this->initFacetMincountFromConfig($config->$facetSettings ?? null);
 
@@ -175,5 +191,40 @@ class Params extends \VuFind\Search\Solr\Params {
         $this->initFacetRestrictionsFromConfig($config->$facetSettings ?? null);
 
         return parent::initFacetList($facetList, $facetSettings, $cfgFile);
+    }
+
+    /**
+     * Initialize facet settings for the advanced search screen.
+     * 
+     * AK: Get custom facets for active search tab if there is one.
+     * 
+     * @param array $activeSearchTab Information about active search tab or null
+     *
+     * @return void
+     */
+    public function initAdvancedFacets($activeSearchTab = null)
+    {
+        // AK: Pass information about active search tab or null
+        $this->initFacetList('Advanced', 'Advanced_Settings', null,
+            $activeSearchTab);
+    }
+
+    /**
+     * Initialize facet settings for the home page.
+     * 
+     * AK: Get custom facets for active search tab if there is one.
+     * 
+     * @param array $activeSearchTab Information about active search tab or null
+     *
+     * @return void
+     */
+    public function initHomePageFacets($activeSearchTab = null)
+    {        
+        // Load Advanced settings if HomePage settings are missing (legacy support):
+        // AK: Pass information about active search tab or null
+        if (!$this->initFacetList('HomePage', 'HomePage_Settings', null,
+            $activeSearchTab)) {
+            $this->initAdvancedFacets($activeSearchTab);
+        }
     }
 }
