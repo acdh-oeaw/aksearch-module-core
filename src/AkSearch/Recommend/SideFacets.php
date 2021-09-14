@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2020.
+ * Copyright (C) AK Bibliothek Wien 2021.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -50,24 +50,36 @@ class SideFacets extends \VuFind\Recommend\SideFacets
     protected $hierarchicalFacetNestingStyle;
 
     /**
+     * AK: Search tabs view helper
+     *
+     * @var \VuFind\View\Helper\Root\SearchTabs
+     */
+    protected $searchTabs;
+
+    /**
      * Constructor
      *
      * @param \VuFind\Config\PluginManager $configLoader Configuration loader
      * @param HierarchicalFacetHelper      $facetHelper  Helper for handling
      * hierarchical facets
+     * @param \VuFind\View\Helper\Root\SearchTabs $searchTabs Helper for handling
+     * search tabs
      */
     public function __construct(
         \VuFind\Config\PluginManager $configLoader,
-        HierarchicalFacetHelper $facetHelper = null
+        HierarchicalFacetHelper $facetHelper = null,
+        \VuFind\View\Helper\Root\SearchTabs $searchTabs = null
     ) {
         parent::__construct($configLoader);
         $this->hierarchicalFacetHelper = $facetHelper;
+        $this->searchTabs = $searchTabs;
     }
 
     /**
      * Store the configuration of the recommendation module.
      * 
-     * AK: Get nesting style for hierarchical facets.
+     * AK: Get custom facets for active search tab (if any). Get nesting style for
+     * hierarchical facets.
      *
      * @param string $settings Settings from searches.ini.
      *
@@ -83,6 +95,29 @@ class SideFacets extends \VuFind\Recommend\SideFacets
 
         // Load the desired facet information...
         $config = $this->configLoader->get($iniName);
+
+        // AK: Get active search tab. We use the "SearchTabs" view helper for this.
+        $hiddenFilters = $this->searchTabs->getHiddenFilters('Solr', true, false);
+        $tabConfig = $this->searchTabs->getTabConfig('Solr', null, null, null,
+            $hiddenFilters);
+        $activeSearchTab = $tabConfig['selected'] ?? null;
+
+        // AK: Get id for active search tab (if any) and create the section name
+        // from it for that we will look in facets.ini
+        $sectionNameToCheck = isset($activeSearchTab['id'])
+            ? $activeSearchTab['id'] . '_Results'
+            : null;
+
+        // AK: Get section names from facets.ini and check if there is a section
+        // name for the active search tab (if any)
+        $facetIniSections = array_keys($config->toArray());
+        $sectionNameToUse = (in_array($sectionNameToCheck, $facetIniSections))
+            ? $sectionNameToCheck
+            : null;
+
+        // AK: Use the section from facets.ini for active search tab (if any). If
+        // it is null, use the default that was already set before.
+        $mainSection = $sectionNameToUse ?? $mainSection;
 
         // All standard facets to display:
         $this->mainFacets = isset($config->$mainSection) ?

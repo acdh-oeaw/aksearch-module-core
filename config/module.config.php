@@ -115,7 +115,7 @@ $config = [
             ],
             'recommend' => [
                 'factories' => [
-                    'AkSearch\Recommend\SideFacets' => 'VuFind\Recommend\SideFacetsFactory'
+                    'AkSearch\Recommend\SideFacets' => 'AkSearch\Recommend\SideFacetsFactory'
                 ],
                 'aliases' => [
                     'sidefacets' => 'AkSearch\Recommend\SideFacets'
