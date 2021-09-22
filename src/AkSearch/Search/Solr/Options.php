@@ -274,6 +274,61 @@ class Options extends \VuFind\Search\Solr\Options {
     public function getAdvSearchTabHandlers()
     {
         return $this->advSearchTabHandlers;
-    }    
+    }
+
+    /**
+     * Translate a field name to a displayable string for rendering a query in
+     * human-readable format:
+     * 
+     * AK: Also take into account the custom basic and advanced search tab handlers.
+     *
+     * @param string $field Field name to display.
+     *
+     * @return string       Human-readable version of field name.
+     */
+    public function getHumanReadableFieldName($field)
+    {
+        // AK: Check if we have custom basic search tab handlers for translation
+        $basicSearchTabHandlers = [];
+        if (!empty($this->basicSearchTabHandlers)) {
+            // AK: Create a flat array for better user below
+            $basicSearchTabHandlers =
+                array_merge(...array_values($this->basicSearchTabHandlers));
+        }
+
+        // AK: Check if we have custom advanced search tab handlers for translation
+        $advSearchTabHandlers = [];
+        if (!empty($this->advSearchTabHandlers)) {
+            // AK: Create a flat array for better user below
+            $advSearchTabHandlers =
+                array_merge(...array_values($this->advSearchTabHandlers));
+        }
+
+        if (isset($this->basicHandlers[$field])) {
+            return $this->translate($this->basicHandlers[$field]);
+        } elseif (isset($this->advancedHandlers[$field])) {
+            return $this->translate($this->advancedHandlers[$field]);
+        } elseif (isset($basicSearchTabHandlers[$field])) {
+            // AK: Translate the basic search tab handler
+            $translatedBasicSearchTabHandler =
+                $this->translate($basicSearchTabHandlers[$field]);
+            // AK: Remove double dashes "--" from the beginning of the string. This
+            // is very AK specific.
+            $basicSearchTabHandler =
+                preg_replace('/^[-\s]+/', '', $translatedBasicSearchTabHandler);
+            return $basicSearchTabHandler;
+        } elseif (isset($advSearchTabHandlers[$field])) {
+            // AK: Translate the advanced search tab handler
+            $translatedAdvSearchTabHandler =
+                $this->translate($advSearchTabHandlers[$field]);
+            // AK: Remove double dashes "--" from the beginning of the string. This
+            // is very AK specific.
+            $advSearchTabHandler =
+                preg_replace('/^[-\s]+/', '', $translatedAdvSearchTabHandler);
+            return $advSearchTabHandler;
+        } else {
+            return $field;
+        }
+    }
 
 }
