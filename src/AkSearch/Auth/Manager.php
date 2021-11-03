@@ -4,7 +4,7 @@
  *
  * PHP version 7
  *
- * Copyright (C) AK Bibliothek Wien 2019.
+ * Copyright (C) AK Bibliothek Wien 2021.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -26,6 +26,8 @@
  * @link     https://vufind.org Main Page
  */
 namespace AkSearch\Auth;
+use VuFind\Exception\Auth as AuthException;
+use VuFind\Db\Row\User as UserRow;
 
 /**
  * AK: Extending wrapper class for handling logged-in user in session.
@@ -37,7 +39,127 @@ namespace AkSearch\Auth;
  * @link     https://vufind.org Main Page
  */
 class Manager extends \VuFind\Auth\Manager
+    implements \Laminas\Log\LoggerAwareInterface
 {
+    use \VuFind\Log\LoggerAwareTrait;
+
+    /**
+     * AK: Adding user to LDAP
+     *
+     * @param UserRow $user User DB row from newly created user
+     * @param object $conf  LDAP_Add_User config from config.ini
+     * 
+     * @return void
+     */
+    private function addUserToLdap($user, $conf) {
+        $id = $user->id;
+        $username = $user->username;
+        $passHash = $user->pass_hash;
+        $firstname = $user->firstname ?? null;
+        $lastname = $user->lastname ?? null;
+        $email = $user->email ?? null;
+        $displayName = ($firstname)
+            ? trim($firstname) . (($lastname) ? ' '.trim($lastname) : '')
+            : trim($lastname);
+
+        $attr['objectClass'][0] = 'inetOrgPerson';
+        $attr['objectClass'][1] = 'organizationalPerson';
+        $attr['objectClass'][2] = 'person';
+        $attr['objectClass'][3] = 'top';
+        $attr['uid'] = $id;
+        $attr['cn'] = $username;
+        $attr['displayName'] = $displayName;
+        $attr['givenName'] = ($firstname) ? trim($firstname) : null;
+        $attr['sn'] = ($lastname) ? trim($lastname) : 'NoSurname';
+        $attr['mail'] = $email;
+        $attr['userPassword'] = ($conf->userPassword_prefix ?? '') . $passHash;
+        $attr = array_filter($attr);
+
+        $ldapConnection = $this->getLdapConnection($conf);
+        $this->ldapBind($ldapConnection, $conf);
+
+        $dn_attr_value = $conf->dn_attr_value;
+        $dn_prefix = $conf->dn_attr_key.'='.$user->$dn_attr_value;
+        $dn = $dn_prefix . ',' . $conf->add_to_dn;
+
+        try {
+            $ldapAdd = ldap_add($ldapConnection, $dn, $attr);
+            if (!$ldapAdd) {
+                $this->debug('Error when trying to add an entry to LDAP. '
+                    .'LDAP error message: ' . ldap_error($ldapConnection));
+                throw new AuthException('new_user_ldap_error');
+            }
+        } catch (\Exception $ex) {
+            $this->debug('Error when trying to add an entry to LDAP. Does this'
+                .' account already exist? DN: ' . $dn
+                .'. LDAP error message: ' . ldap_error($ldapConnection)
+                .'. Exception message: ' . $ex->getMessage());
+            throw new AuthException('new_user_ldap_error');
+        }
+    }
+
+    /**
+     * AK: Create an LDAP connection
+     *
+     * @param object $conf  LDAP_Add_User config from config.ini
+     * 
+     * @return resource|false LDAP connection
+     */
+    private function getLdapConnection($conf) {
+        $connection = ldap_connect($conf->host, $conf->port);
+        if (!$connection) {
+            $this->debug('LDAP connection to '.$conf->host.' on port '.$conf->port
+                .' failed. LDAP error message: ' . ldap_error($connection));
+            throw new AuthException('new_user_ldap_error');
+        }
+        // Set LDAP options -- use protocol version 3
+        if (!@ldap_set_option($connection, LDAP_OPT_PROTOCOL_VERSION, 3)) {
+            $this->debug('Failed to set LDAP protocol version 3');
+        }
+
+        return $connection;
+    }
+
+    /**
+     * AK: Execute an LDAP bind. Throws AuthException if bind was not successful.
+     *
+     * @param resource $connection An LDAP connection
+     * @param object $conf  LDAP_Add_User config from config.ini
+     * 
+     * @return bool True on successful bind
+     */
+    private function ldapBind($connection, $conf) {
+        $ldapBind = ldap_bind($connection, $conf->username, $conf->password);
+        if (!$ldapBind) {
+            $this->debug('LDAP bind failed. Error: ' . ldap_error($connection));
+            throw new AuthException('new_user_ldap_error');
+        }
+        return $ldapBind;
+    }
+
+    /**
+     * Create a new user account from the request.
+     * 
+     * AK: Create LDAP user if applicable.
+     *
+     * @param \Laminas\Http\PhpEnvironment\Request $request Request object containing
+     * new account details.
+     *
+     * @throws AuthException
+     * @return UserRow New user row.
+     */
+    public function create($request)
+    {
+        $user = parent::create($request);
+        if ($user) {
+            $ldapAddUserConfig = $this->config->LDAP_Add_User ?? null ?: null;
+            if ($ldapAddUserConfig && $ldapAddUserConfig->add_user_to_ldap == true) {
+                $this->addUserToLdap($user, $ldapAddUserConfig);
+            }
+        }
+        return $user;
+    }
+
     /**
      * AK: Change userdata
      *
