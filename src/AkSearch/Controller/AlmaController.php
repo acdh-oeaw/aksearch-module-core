@@ -41,11 +41,12 @@ use VuFind\I18n\Translator\TranslatorAwareInterface;
  */
 class AlmaController
     extends \VuFind\Controller\AlmaController
-    implements TranslatorAwareInterface
+    implements TranslatorAwareInterface, \Laminas\Log\LoggerAwareInterface
 {
 
     use \VuFind\I18n\Translator\TranslatorAwareTrait;
     use \VuFind\I18n\Translator\LanguageInitializerTrait;
+    use \VuFind\Log\LoggerAwareTrait;
 
     /**
      * Action that is executed when the webhook page is called.
@@ -75,6 +76,15 @@ class AlmaController
                 );
             }
             $requestBodyJson = json_decode($request->getContent());
+        }
+
+        // Log webhook data for inspection if specified to do so
+        $almaConfig = $this->getConfig('Alma');
+        $logWebhookData = $almaConfig->Webhook->log_webhook_data ?? false ?: false;
+        if ($logWebhookData && $requestBodyJson) {
+            $this->log('debug', 'Webhook request URI: '.$request->getUriString());
+            $this->log('debug', 'Webhook payload: '.json_encode($requestBodyJson,
+                JSON_PRETTY_PRINT));
         }
 
         // Get webhook action
