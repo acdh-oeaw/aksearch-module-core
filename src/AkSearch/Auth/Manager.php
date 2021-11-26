@@ -44,14 +44,121 @@ class Manager extends \VuFind\Auth\Manager
     use \VuFind\Log\LoggerAwareTrait;
 
     /**
-     * AK: Adding user to LDAP
+     * AK: Create an LDAP connection
      *
-     * @param UserRow $user User DB row from newly created user
-     * @param object $conf  LDAP_Add_User config from config.ini
+     * @param object $conf The LDAP_Add_User config from config.ini
+     * 
+     * @return resource|false An LDAP connection object
+     * 
+     * @throws AuthException
+     */
+    private function getLdapConnection($conf) {
+        $connection = ldap_connect($conf->host, $conf->port);
+        if (!$connection) {
+            $this->debug('LDAP connection to '.$conf->host.' on port '.$conf->port
+                .' failed. LDAP error message: ' . ldap_error($connection));
+            throw new AuthException('new_user_ldap_error');
+        }
+        // Use LDAP protocol version 3
+        if (!@ldap_set_option($connection, LDAP_OPT_PROTOCOL_VERSION, 3)) {
+            $this->debug('Failed to set LDAP protocol version 3');
+        }
+
+        return $connection;
+    }
+
+    /**
+     * AK: Execute an LDAP bind. Throws AuthException if bind was not successful.
+     *
+     * @param resource $connection An LDAP connection
+     * @param string $bindUsername Username for bind action
+     * @param string $bindPassword Password for bind action
+     * 
+     * @return bool true on successful bind, false otherwise
+     * 
+     * @throws AuthException
+     */
+    private function ldapBind($connection, $bindUsername, $bindPassword) {
+        $ldapBind = ldap_bind($connection, $bindUsername, $bindPassword);
+        if (!$ldapBind) {
+            $this->debug('LDAP bind failed. Error: ' . ldap_error($connection));
+            throw new AuthException('new_user_ldap_error');
+        }
+        return $ldapBind;
+    }
+
+    /**
+     * AK: Check if a user exists in LDAP
+     *
+     * @param object $conf LDAP_Add_User config from config.ini
+     * @param UserRow $user A user row object from the VuFind database
+     * 
+     * @return bool true if the user exists, false otherwise
+     */
+    private function ldapUserExists($conf, $user) {
+        $userExists = false;
+        $username = $user->username;
+        $dnToRead = $conf->dn_attr_key.'='.$username.','.$conf->user_base_dn;
+        $filter = $conf->dn_attr_key.'='.$username;
+        $ldapConnection = $this->getLdapConnection($conf);
+        ldap_bind($ldapConnection, $conf->readuser_name, $conf->readuser_password);
+        try {
+            ldap_read($ldapConnection, $dnToRead, $filter, ['dn'], 1, 1, 30);
+            $userExists = true;
+        } catch (\Exception $ex) {
+            $this->debug('User not found when reading LDAP with DN '.$dnToRead.'. '
+                .'Exception message: '.$ex->getMessage());
+        }
+        return $userExists;
+    }
+
+    /**
+     * Find the specified username in the directory
+     *
+     * @param object $conf LDAP_Add_User config from config.ini
+     * @param string $id   A user ID from the VuFind DB that is used as the uid
+     * value of the LDAP user
+     *
+     * @return array|false First subarray from the result array that we get from
+     * "ldap_get_entries", false if no user entry was found by the given ID
+     */
+    public function ldapSearchUserByUid($conf, $id)
+    {
+        $searchResult = false;
+        $ldapSearch = false;
+        $ldapConnection = $this->getLdapConnection($conf);
+        ldap_bind($ldapConnection, $conf->readuser_name, $conf->readuser_password);
+        try {
+            $ldapFilter = 'uid=' . $id;
+            $ldapSearch = ldap_search($ldapConnection, $conf->user_base_dn, $ldapFilter);
+            if (!$ldapSearch) {
+                $this->debug('User with ID "'.$id.'" not found in LDAP. '
+                    .'LDAP message: ' . ldap_error($ldapConnection));
+                return false;
+            } else {
+                $arr = ldap_get_entries($ldapConnection, $ldapSearch);
+                $searchResult = $arr[0];
+            }
+        } catch (\Exception $ex) {
+            $this->debug('Error when trying to search user by ID "'.$id.'" in LDAP. '
+                .'LDAP error message: ' . ldap_error($ldapConnection));
+        }
+
+        return $searchResult;
+    }
+
+    /**
+     * AK: Add user to LDAP
+     *
+     * @param UserRow $user Row object from newly created user in VuFind user table
+     * @param object  $conf LDAP_Add_User config from config.ini
      * 
      * @return void
+     * 
+     * @throws AuthException
      */
     private function addUserToLdap($user, $conf) {
+        // Get data from VuFind user row object
         $id = $user->id;
         $username = $user->username;
         $passHash = $user->pass_hash;
@@ -62,6 +169,7 @@ class Manager extends \VuFind\Auth\Manager
             ? trim($firstname) . (($lastname) ? ' '.trim($lastname) : '')
             : trim($lastname);
 
+        // Create attributes for LDAP "add" command
         $attr['objectClass'][0] = 'inetOrgPerson';
         $attr['objectClass'][1] = 'organizationalPerson';
         $attr['objectClass'][2] = 'person';
@@ -73,16 +181,22 @@ class Manager extends \VuFind\Auth\Manager
         $attr['sn'] = ($lastname) ? trim($lastname) : 'NoSurname';
         $attr['mail'] = $email;
         $attr['userPassword'] = ($conf->userPassword_prefix ?? '') . $passHash;
+
+        // Filter out empty/null values
         $attr = array_filter($attr);
 
+        // Create LDAP connection and bind with a user the is allowed to write
         $ldapConnection = $this->getLdapConnection($conf);
-        $this->ldapBind($ldapConnection, $conf);
+        $this->ldapBind($ldapConnection, $conf->writeuser_name,
+            $conf->writeuser_password);
 
+        // Create the DN for the new LDAP entry
         $dn_attr_value = $conf->dn_attr_value;
         $dn_prefix = $conf->dn_attr_key.'='.$user->$dn_attr_value;
-        $dn = $dn_prefix . ',' . $conf->add_to_dn;
+        $dn = $dn_prefix . ',' . $conf->user_base_dn;
 
         try {
+            // Execute the "add" command
             $ldapAdd = ldap_add($ldapConnection, $dn, $attr);
             if (!$ldapAdd) {
                 $this->debug('Error when trying to add an entry to LDAP. '
@@ -99,42 +213,80 @@ class Manager extends \VuFind\Auth\Manager
     }
 
     /**
-     * AK: Create an LDAP connection
+     * AK: Update a password for a user in LDAP
      *
-     * @param object $conf  LDAP_Add_User config from config.ini
+     * @param object  $conf LDAP_Add_User config from config.ini
+     * @param UserRow $user A user row object from the user table in the VuFind DB
      * 
-     * @return resource|false LDAP connection
+     * @return bool true if updating the password was successful, false otherwise
+     * 
+     * @throws Exception
      */
-    private function getLdapConnection($conf) {
-        $connection = ldap_connect($conf->host, $conf->port);
-        if (!$connection) {
-            $this->debug('LDAP connection to '.$conf->host.' on port '.$conf->port
-                .' failed. LDAP error message: ' . ldap_error($connection));
-            throw new AuthException('new_user_ldap_error');
-        }
-        // Set LDAP options -- use protocol version 3
-        if (!@ldap_set_option($connection, LDAP_OPT_PROTOCOL_VERSION, 3)) {
-            $this->debug('Failed to set LDAP protocol version 3');
-        }
+    private function updateLdapPassword($conf, $user) {
+        // Return variable
+        $success = false;
 
-        return $connection;
+        // Get some values we need
+        $dnAttrValue = $conf->dn_attr_value;
+        $dnValue = $user->$dnAttrValue;
+        $passHash = $user->pass_hash;
+
+        // Create DN for which the password should be updated
+        $dnToUpdate = $conf->dn_attr_key.'='.$dnValue.','.$conf->user_base_dn;
+
+        // Create LDAP connection
+        $ldapConnection = $this->getLdapConnection($conf);
+        try {
+            // Set the hashed user password
+            $attr['userPassword'] = ($conf->userPassword_prefix ?? '') . $passHash;
+
+            // Bind to the user
+            ldap_bind($ldapConnection, $conf->writeuser_name,
+                $conf->writeuser_password);
+
+            // Execute the replace command 
+            $success = ldap_mod_replace($ldapConnection, $dnToUpdate, $attr);
+        } catch (\Exception $ex) {
+            $this->debug('Could not update password in LDAP for user with DN '
+                .$dnToUpdate.'. Exception message: '.$ex->getMessage());
+        }
+        return $success;
     }
 
     /**
-     * AK: Execute an LDAP bind. Throws AuthException if bind was not successful.
+     * AK: Rename an LDAP entry
      *
-     * @param resource $connection An LDAP connection
-     * @param object $conf  LDAP_Add_User config from config.ini
+     * @param object $conf LDAP_Add_User config from config.ini
+     * @param array $ldapUser An LDAP user entry. This is a single array entry from
+     * a "ldap_get_entries" result (that was fed with an "ldap_search" result).
+     * @param string $dnUpdateValue The new value that should replace an old value
      * 
-     * @return bool True on successful bind
+     * @return boolean true if the operation was successful, false otherwise
      */
-    private function ldapBind($connection, $conf) {
-        $ldapBind = ldap_bind($connection, $conf->username, $conf->password);
-        if (!$ldapBind) {
-            $this->debug('LDAP bind failed. Error: ' . ldap_error($connection));
-            throw new AuthException('new_user_ldap_error');
+    public function renameLdapEntry($conf, $ldapUser, $dnUpdateValue) {
+        // Initialize result variable
+        $success = false;
+
+        // Connect to LDAP
+        $ldapConnection = $this->getLdapConnection($conf);
+        try {
+            // Get the current DN from the given LDAP user
+            $dnToUpdate = $ldapUser['dn'];
+
+            // Create the new DN with the new key and new value
+            $dnKey = $conf->dn_attr_key;
+
+            // Bind with a write user
+            ldap_bind($ldapConnection, $conf->writeuser_name,
+                $conf->writeuser_password);
+
+            // Execute the rename command
+            $success = ldap_rename($ldapConnection, $dnToUpdate, $dnKey.'='.$dnUpdateValue, $conf->user_base_dn, true);
+        } catch (\Exception $ex) {
+            $this->debug('Could not rename LDAP entry with DN '.$dnToUpdate.'. '
+                .'Exception message: '.$ex->getMessage());
         }
-        return $ldapBind;
+        return $success;
     }
 
     /**
@@ -145,7 +297,6 @@ class Manager extends \VuFind\Auth\Manager
      * @param \Laminas\Http\PhpEnvironment\Request $request Request object containing
      * new account details.
      *
-     * @throws AuthException
      * @return UserRow New user row.
      */
     public function create($request)
@@ -157,6 +308,35 @@ class Manager extends \VuFind\Auth\Manager
                 $this->addUserToLdap($user, $ldapAddUserConfig);
             }
         }
+        return $user;
+    }
+
+    /**
+     * Update a user's password from the request.
+     * 
+     * AK: Update password in or add new user to LDAP if applicable
+     *
+     * @param \Laminas\Http\PhpEnvironment\Request $request Request object containing
+     * password change details.
+     *
+     * @return UserRow New user row.
+     */
+    public function updatePassword($request)
+    {
+        $user = parent::updatePassword($request);
+
+        $ldapAddUserConfig = $this->config->LDAP_Add_User ?? null ?: null;
+        if ($ldapAddUserConfig && $ldapAddUserConfig->add_user_to_ldap == true) {
+            $ldapUserExists = $this->ldapUserExists($ldapAddUserConfig, $user);
+            if ($ldapUserExists) {
+                // AK: Update password of existing user
+                $this->updateLdapPassword($ldapAddUserConfig, $user);
+            } else {
+                // AK: Create new user in LDAP
+                $this->addUserToLdap($user, $ldapAddUserConfig);
+            }
+        }
+
         return $user;
     }
 
@@ -263,6 +443,5 @@ class Manager extends \VuFind\Auth\Manager
         // Pass through to authentication method
         return $this->getAuth($authMethod)->getLibraryEmailVars($request, $user);
     }
-
 
 }

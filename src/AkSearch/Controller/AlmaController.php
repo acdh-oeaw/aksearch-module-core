@@ -229,6 +229,28 @@ class AlmaController
 
                 try {
                     $user->save();
+
+                    // Update LDAP user if applicable
+                    $ldapAddUserConfig = $this->config->LDAP_Add_User?? null
+                        ?: null;
+                    if ($ldapAddUserConfig
+                        && $ldapAddUserConfig->add_user_to_ldap == true)
+                    {
+                        $dnAttrValue = $ldapAddUserConfig->dn_attr_value;
+                        $dnUpdateValue = $user->$dnAttrValue;
+                        $ldapUser = $this->getAuthManager()
+                            ->ldapSearchUserByUid($ldapAddUserConfig, $user->id);
+                        if ($ldapUser) {
+                            $ldapUserUpdateSuccess = $this->getAuthManager()
+                                ->renameLdapEntry($ldapAddUserConfig, $ldapUser,
+                                $dnUpdateValue);
+                            if (!$ldapUserUpdateSuccess) {
+                                $this->debug('LDAP user with uid '.$user->id.' was '
+                                .'not found when trying to rename LDAP entry.');
+                            }
+                        }
+                    }
+                    
                     if ($method == 'CREATE') {
                         // AK: Add language parameter
                         $this->sendSetPasswordEmail($user, $this->config, $lang);
@@ -260,6 +282,11 @@ class AlmaController
             if ($user) {
                 $rowsAffected = $user->delete();
                 if ($rowsAffected == 1) {
+
+                    // TODO: AK: We could delete an LDAP user here. Keep this note
+                    // for future reference!
+                    // $this->getAuthManager()->...
+
                     $jsonResponse = $this->createJsonResponse(
                         'Successfully deleted use with primary ID \'' . $primaryId .
                         '\' in VuFind.', 200
