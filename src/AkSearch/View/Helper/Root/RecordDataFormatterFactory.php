@@ -196,6 +196,17 @@ class RecordDataFormatterFactory
             ['translate' => true, 'translationTextDomain' => 'Languages::']
         );
 
+        // AK: Sowidok - get persons
+        $spec->setTemplateLine(
+            'SowidokPersonActive', 'getSowidokActivePersons', 'data-sowidokActivePerson.phtml'
+        );
+        $spec->setTemplateLine(
+            'SowidokPersonPassive', 'getSowidokPassivePersons', 'data-sowidokPassivePerson.phtml'
+        );
+        $spec->setTemplateLine(
+            'SowidokPersonActivePassive', 'getSowidokActivePassivePersons', 'data-sowidokActivePassivePerson.phtml'
+        );
+
         // AK: Get preceding titles
         $spec->setTemplateLine(
             'Precedings', 'getPrecedings', 'data-relations.phtml'
@@ -236,7 +247,10 @@ class RecordDataFormatterFactory
         );
 
         // AK: Get dewey classification
-        $spec->setTemplateLine('Classification', 'getAllDeweys', 'data-localDewey');
+        $spec->setTemplateLine('Classification', 'getAllDeweys', 'data-localDewey.phtml');
+
+        // AK: Sowidok - get geographical note
+        $spec->setTemplateLine('Region', 'getSowidokGeographical', 'data-sowidokGeographical.phtml');
 
         $spec->setTemplateLine(
             'child_records', 'getChildRecordCount', 'data-childRecords.phtml',

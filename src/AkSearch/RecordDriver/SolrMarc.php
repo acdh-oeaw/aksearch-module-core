@@ -1263,9 +1263,9 @@ class SolrMarc extends SolrDefault
     }
 
     /**
-     * Get AC number (Austrian Catalogue number) from Solr field acNo_txt. Fallback
-     * to MarcXML if there is no such field. This is very specific to Austrian
-     * libraries.
+     * AK: Get AC number (Austrian Catalogue number) from Solr field acNo_txt.
+     * Fallback to MarcXML if there is no such field. This is very specific to
+     * Austrian libraries.
      *
      * @return string|null  The AC number or null
      */
@@ -1275,6 +1275,34 @@ class SolrMarc extends SolrDefault
             $acNo = $this->getAcNoFromXml();
         }
         return $acNo;
+    }
+
+    /**
+     * AK: Sowidok - show "Active Persons"
+     */
+    public function getSowidokActivePersons() {
+        return $this->fields['aktivePerson_txt_mv'] ?? null;
+    }
+
+    /**
+     * AK: Sowidok - show "Passive Persons"
+     */
+    public function getSowidokPassivePersons() {
+        return $this->fields['passivePerson_txt_mv'] ?? null;
+    }
+
+    /**
+     * AK: Sowidok - show "Active/Passive Persons"
+     */
+    public function getSowidokActivePassivePersons() {
+        return $this->fields['aktivePassivePerson_txt_mv'] ?? null;
+    }
+
+    /**
+     * AK: Sowidok - show geographical data (land/region)
+     */
+    public function getSowidokGeographical() {
+        return $this->fields['sowidokGeographical_txt_mv'] ?? null;
     }
 
 }
