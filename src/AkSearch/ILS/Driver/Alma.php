@@ -810,6 +810,24 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
                 ? $this->parseDate((string) $xml->expiry_date)
                 : null,
         ];
+
+        // Calculating age
+        $birthDate = (isset($xml->birth_date))
+            ? $this->parseDate((string) $xml->birth_date)
+            : null;
+        if ($birthDate) {
+            try {
+                $date = new \DateTime($birthDate);
+                $now = new \DateTime();
+                $interval = $now->diff($date);
+                if (is_int($interval->y)) {
+                    $profile['age'] = strval($interval->y);
+                }
+            } catch (\Exception $ex) {
+                // Fail over
+            }
+        }
+
         $contact = $xml->contact_info;
         if ($contact) {
             if ($contact->addresses) {
@@ -899,6 +917,10 @@ class Alma extends \VuFind\ILS\Driver\Alma implements
             $this->cache->setItem(
                 'Alma_User_' . $patronIdKey . '_ExpiryDate',
                 $profile['expiration_date'] ?? null
+            );
+            $this->cache->setItem(
+                'Alma_User_' . $patronIdKey . '_Age',
+                $profile['age'] ?? null
             );
         }
 
