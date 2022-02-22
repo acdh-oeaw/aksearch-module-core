@@ -103,8 +103,13 @@ class Manager extends \VuFind\Auth\Manager
         $ldapConnection = $this->getLdapConnection($conf);
         ldap_bind($ldapConnection, $conf->readuser_name, $conf->readuser_password);
         try {
-            ldap_read($ldapConnection, $dnToRead, $filter, ['dn'], 1, 1, 30);
-            $userExists = true;
+            $read = ldap_read($ldapConnection, $dnToRead, $filter, ['dn'], 1, 1, 30);
+            if ($read != false) {
+                $entries = ldap_get_entries($ldapConnection, $read);
+                if ($entries != false) {
+                    $userExists = true;
+                }
+            }
         } catch (\Exception $ex) {
             $this->debug('User not found when reading LDAP with DN '.$dnToRead.'. '
                 .'Exception message: '.$ex->getMessage());
@@ -137,7 +142,7 @@ class Manager extends \VuFind\Auth\Manager
                 return false;
             } else {
                 $arr = ldap_get_entries($ldapConnection, $ldapSearch);
-                $searchResult = $arr[0];
+                $searchResult = $arr[0] ?? false;
             }
         } catch (\Exception $ex) {
             $this->debug('Error when trying to search user by ID "'.$id.'" in LDAP. '
